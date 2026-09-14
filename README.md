@@ -87,5 +87,6 @@ node scripts/build_stats.mjs              # 人口と面積を入れ、data/stat
 ```
 
 - 取得先の負荷を抑えるため、e-Stat は1.5秒、Nominatim は1秒、Overpass は数秒おきに1件ずつ取得します。
+- 取得したファイルは `data/sources/`・`data/cache/` に残り、次に実行したときは飛ばします。Overpass は混んでいると失敗することがあり、そのときは失敗したものを表示して終了コード1で止まるので、同じコマンドをもう一度実行してから次へ進んでください。
 - OpenStreetMap は日々更新されるので、同じ手順でも島の形が公開中のファイルと変わることがあります。公開中のデータは 2026-09-14 に取得したものです。
 - 結果の確認: `data/geo_report.txt`（形と位置の出どころ）、`data/stats_report.txt`（人口・面積の出どころと、国勢調査から出した人口と国交省・沖縄県の値の比較）。`python scripts/check_areas.py` のあと `node scripts/check_areas.mjs` を実行すると、形の面積と国交省の一覧の面積を比べます。

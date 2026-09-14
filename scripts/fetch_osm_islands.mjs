@@ -14,6 +14,7 @@ const byPref = {};
 for (const r of rows) (byPref[r.id.slice(0, 2)] ??= new Set()).add(r.name.replace(/・/g, "|"));
 const UA = "shimanuri-data-build/0.1 (personal non-commercial island map)";
 const endpoint = "https://overpass-api.de/api/interpreter";
+const failed = [];
 for (const [pc, names] of Object.entries(byPref)) {
   const file = path.join(cache, `${pc}.json`);
   if (fs.existsSync(file)) { console.log(pc, "cached"); continue; }
@@ -30,5 +31,11 @@ for (const [pc, names] of Object.entries(byPref)) {
     console.log(pc, "retry", attempt, r.status, t.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 160));
     await new Promise(res => setTimeout(res, 30000));
   }
+  if (!fs.existsSync(file)) failed.push(pc);
   await new Promise(res => setTimeout(res, 5000));
+}
+if (failed.length) {
+  // cached prefectures are skipped, so running the script again fetches only these
+  console.error(`Overpass failed for prefectures ${failed.join(", ")}; run this script again`);
+  process.exit(1);
 }

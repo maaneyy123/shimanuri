@@ -7,6 +7,7 @@ const root = path.resolve(import.meta.dirname, "..");
 const dir = path.join(root, "data/cache/water");
 fs.mkdirSync(dir, { recursive: true });
 const overrides = JSON.parse(fs.readFileSync(path.join(root, "scripts/shape_overrides.json"), "utf8"));
+const failed = [];
 for (const [id, ov] of Object.entries(overrides)) {
   if (!ov.waterBbox) continue;
   const file = path.join(dir, `${id}.json`);
@@ -24,4 +25,10 @@ for (const [id, ov] of Object.entries(overrides)) {
     console.log(id, "retry", attempt, r.status);
     await new Promise((res) => setTimeout(res, 45000));
   }
+  if (!fs.existsSync(file)) failed.push(id);
+}
+if (failed.length) {
+  // islands already fetched are skipped, so running the script again fetches only these
+  console.error(`Overpass failed for islands ${failed.join(", ")}; run this script again`);
+  process.exit(1);
 }

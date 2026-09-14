@@ -9,6 +9,7 @@ fs.mkdirSync(dir, { recursive: true });
 const islands = JSON.parse(fs.readFileSync(path.join(root, "web/public/data/islands.json"), "utf8")).islands;
 const need = new Set(JSON.parse(fs.readFileSync(path.join(root, "data/cache/need_coast.json"), "utf8")));
 const UA = "shimanuri-data-build/0.1 (personal non-commercial island map)";
+const failed = [];
 for (const is of islands.filter((i) => need.has(i.id) && i.lat != null)) {
   const file = path.join(dir, `${is.id}.json`);
   if (fs.existsSync(file)) continue;
@@ -27,5 +28,11 @@ for (const is of islands.filter((i) => need.has(i.id) && i.lat != null)) {
     console.log(is.id, "retry", attempt, r.status);
     await new Promise((res) => setTimeout(res, 20000));
   }
+  if (!fs.existsSync(file)) failed.push(is.id);
   await new Promise((res) => setTimeout(res, 3000));
+}
+if (failed.length) {
+  // islands already fetched are skipped, so running the script again fetches only these
+  console.error(`Overpass failed for islands ${failed.join(", ")}; run this script again`);
+  process.exit(1);
 }
