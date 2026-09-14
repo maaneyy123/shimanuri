@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# primary sources are kept locally only (prefectural PDFs cannot be redistributed)
+data/sources/
+data/cache/

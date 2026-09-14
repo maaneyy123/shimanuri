@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="行った有人島を6段階で地図に塗って記録します。URLを開けば続きから塗れます。" />
+    <title>しまぬり</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <div class="top">
+      <header class="site-header">
+        <h1 class="logo">
+          <a href="./#A" title="まっさらな地図を開く">
+            <svg class="logo-mark" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true">
+              <path d="M14 38c-2-9 5-18 15-20 6-1 9-6 16-4 7 2 9 10 6 16-2 4 1 8-2 12-4 6-13 6-19 5-8-1-14-3-16-9z" fill="#f39237" stroke="#23313b" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M8 54c6-4 12 4 18 0s12 4 18 0 12 4 14 1" fill="none" stroke="#5aa5dc" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+            <span class="logo-text">しまぬり</span>
+          </a>
+        </h1>
+        <p class="tagline">行った有人島を地図に塗る</p>
+        <div class="header-actions">
+          <label class="compact">背景
+            <select id="basemap">
+              <option value="blank" selected>白地図</option>
+              <option value="pale">淡色地図</option>
+            </select>
+          </label>
+          <label class="check compact"><input type="checkbox" id="show-names" checked />島名</label>
+          <button type="button" id="share" class="share-button" aria-label="共有">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7l-6.7 3.4a3 3 0 1 0 0 3.2L15 17a3 3 0 1 0 3-1Z"/></svg>
+            <span>共有</span>
+          </button>
+          <span id="share-toast" class="toast" role="status" hidden></span>
+        </div>
+      </header>
+    </div>
+
+    <div class="map-wrap">
+      <div id="map" aria-label="有人島の地図"></div>
+      <ul class="legend" id="legend"></ul>
+    </div>
+
+    <main class="pane" id="pane">
+      <section id="summary" class="summary" aria-live="polite"></section>
+
+      <div class="sorter">
+        <label>並び順
+          <select id="sort">
+            <option value="pref" selected>都道府県順</option>
+            <option value="pop-desc">人口の多い順</option>
+            <option value="pop-asc">人口の少ない順</option>
+            <option value="area-desc">面積の広い順</option>
+            <option value="area-asc">面積の狭い順</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="filter-unvisited" />未踏だけ</label>
+      </div>
+      <div id="list"></div>
+
+      <footer id="about" class="about">
+        <h2>このサイトについて</h2>
+        <p>有人島ごとに、いちばん深い体験のレベルを選んで地図を塗ります。記録はこのページのURLに入っているので、URLを保存しておけば、あとから開いて続きを塗れます。</p>
+        <h3>レベルの目安</h3>
+        <table class="guide" id="guide"></table>
+        <p class="note">レベルの区分は、都道府県市区町村「落書き帳」で考案された「経県値」のガイドラインを参考にしています。</p>
+        <h3>島の一覧</h3>
+        <p>本州・北海道・四国・九州・沖縄本島を除く有人島 <span id="island-count"></span> 島です。人口は令和2年国勢調査、面積の単位は km² です。数値が分からない島は「-」と表示しています。</p>
+        <h3>出典</h3>
+        <ul class="sources">
+          <li>国土交通省「離島振興対策実施地域一覧」「日本の島嶼の構成」（令和8年4月1日現在）: 離島振興法の島の人口・面積</li>
+          <li>沖縄県「離島関係資料」（令和6年3月）</li>
+          <li>鹿児島県「奄美群島の概況」</li>
+          <li>離島経済新聞「有人離島一覧」</li>
+          <li>総務省統計局「令和2年国勢調査」町丁・字等別境界データ（政府統計の総合窓口(e-Stat) https://www.e-stat.go.jp/）を加工して作成: 離島振興法以外の島の人口（面積の半分以上が島にある区域の人口の合計。島と本土にまたがる区域がある島は「-」）、島の所在市町村の判定、一部の島の位置と形（高島〔鳴門市〕、大島〔宿毛市〕）</li>
+          <li>「令和8年全国都道府県市区町村別面積調」付3 島面積（国土地理院）（https://www.gsi.go.jp/KOKUJYOHO/MENCHO-title.htm）をもとに作成: 離島振興法以外の島の面積（1km²以上の島）</li>
+          <li>島の形と位置: © OpenStreetMap contributors（ODbL）を加工して作成（Overpass API、Nominatim で取得）</li>
+          <li>一部の島の位置: 国土地理院 地名検索（六口島、鵜瀬島、高島〔鳴門市〕、大島〔宿毛市〕、瀬長島、戸馳島）、Wikipedia（前島〔時津町〕、南串島）</li>
+          <li>背景: 地理院タイル（白地図・淡色地図）</li>
+        </ul>
+      </footer>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

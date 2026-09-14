@@ -1,0 +1,36 @@
+id	pref	name	muni	source	notes
+13001	東京都	大島	大島町	nominatim	
+32007	島根県	瀬戸ヶ島	浜田市	nominatim	shape from OSM coastline (0.29 km2, known -)
+33005	岡山県	石島	玉野市	nominatim	shape from OSM coastline (2.63 km2, known 0.82)
+33007	岡山県	六口島	倉敷市	manual	国土地理院 地名検索（六口島）; shape from OSM coastline (1.03 km2, known 1.03)
+35014	山口県	大津島	周南市	overpass	shape from OSM coastline (4.76 km2, known 4.76)
+35027	山口県	向島	防府市	census-area-name	point from census areas 大字向島郷ケ崎東第一/大字向島郷ケ崎東第二/大字向島郷ケ崎中/大字向島郷ケ崎西; shape from OSM coastline (8.08 km2, known 7.98)
+36003	徳島県	大毛島	鳴門市	override	大毛島: 位置は国土地理院 地名検索。高島と同じく、1つの海岸線から水路の水面を引いて分けた大毛島側を使う
+36006	徳島県	高島	鳴門市	override	高島（鳴門市）: 位置は国土地理院 地名検索。OpenStreetMap では大毛島と1つの海岸線になっており、間の水路は水面（natural=water）として別に描かれているので、陸地から水面を引いて分けた高島側を使う
+37006	香川県	屏風島	直島町	overpass	shape from OSM coastline (0.12 km2, known 0.12)
+38016	愛媛県	大島	新居浜市	nominatim	shape from OSM coastline (2.14 km2, known 2.14)
+38031	愛媛県	竹ヶ島	宇和島市	nominatim	shape from OSM coastline (0.50 km2, known 0.51)
+39006	高知県	大島	宿毛市	override	大島（宿毛市）: 位置は国土地理院 地名検索。OpenStreetMap では四国と1つの形につながっているため、令和2年国勢調査 町丁・字等別境界の宿毛市大島の区画を OSM の陸地で切り取った形を使う
+42001	長崎県	対馬島	対馬市	nominatim	
+42003	長崎県	泊島	対馬市	overpass	point only: the coastline polygon (0.64 km2, known 0.1) went to 42004
+42004	長崎県	赤島	対馬市	overpass	shape from OSM coastline (0.64 km2, known 0.48)
+42015	長崎県	大島	平戸市	nominatim	
+42033	長崎県	日ノ島	新上五島町	nominatim	
+42046	長崎県	嵯峨島	五島市	nominatim	
+42049	長崎県	松島	西海市	nominatim	shape from OSM coastline (6.34 km2, known 6.37)
+42053	長崎県	鷹島	松浦市	nominatim	shape from OSM coastline (16.18 km2, known 16.18)
+42060	長崎県	竹ノ島	西海市	nominatim	
+42061	長崎県	鵜瀬島	長崎市	manual	OSM "鵜瀬島" found only in 松浦市; 国土地理院 地名検索（鵜瀬島、長崎市琴海側）; shape from OSM coastline (0.27 km2, known -)
+42062	長崎県	前島	時津町	manual	OSM "前島" found only in 佐世保市/新上五島町/五島市; Wikipedia「前島 (長崎県時津町)」の座標。令和2年国勢調査 小地域 時津町子々川郷の島側の区画の代表点（129.8084, 32.8685）と一致; shape from OSM coastline (0.25 km2, known -)
+42064	長崎県	大島	西海市	nominatim	shape from OSM coastline (11.98 km2, known 12.3)
+42065	長崎県	寺島	西海市	census-area-name	OSM "寺島" found only in 佐世保市/対馬市; point from census areas 大島町寺島; shape from OSM coastline (0.97 km2, known 1)
+42066	長崎県	蛎浦島	西海市	overpass	shape from OSM coastline (4.73 km2, known 4.75)
+42068	長崎県	南串島	西海市	manual	Wikipedia「南串島」の座標。令和2年国勢調査 小地域 西海市西海町七釜郷の区画の代表点（129.6499, 32.9976）と一致; shape from OSM coastline (0.72 km2, known -)
+43007	熊本県	戸馳島	宇城市	override	戸馳島: 国勢調査の区画名から出した位置が約2km西の海上にずれていたため、国土地理院 地名検索の位置に直す; shape from OSM coastline (6.96 km2, known 6.95)
+43015	熊本県	天草上島	上天草市・天草市	nominatim	
+43017	熊本県	天草下島	天草市・苓北町	nominatim	
+45001	宮崎県	島野浦島	延岡市	nominatim	
+47034	沖縄県	新城島上地	竹富町	manual	令和2年国勢調査 小地域 竹富町字新城のうち人口のある北側の区画の代表点; shape from OSM coastline (1.76 km2, known -)
+47035	沖縄県	新城島下地	竹富町	manual	OSM "新城島下地" found only in 宮古島市; 令和2年国勢調査 小地域 竹富町字新城のうち南側の区画の代表点; shape from OSM coastline (1.56 km2, known -)
+47037	沖縄県	嘉弥真島	竹富町	nominatim	
+47048	沖縄県	瀬長島	豊見城市	override	瀬長島: 位置は国土地理院 地名検索。OpenStreetMap では沖縄本島（那覇空港の埋立地と海中道路）と1つの形につながっているため、地理院タイル白地図で見える島の海岸線の範囲（道路の付け根まで）で陸地を切り取る
