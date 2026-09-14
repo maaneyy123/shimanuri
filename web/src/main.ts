@@ -16,6 +16,8 @@ type Island = {
   lat: number | null;
   shape: boolean;
   pop: number | null;
+  // on an inhabited-island list, but the 2020 census counted nobody on the island
+  popZero?: boolean;
   area: number | null;
 };
 type IslandData = { version: string; versions: Record<string, number>; islands: Island[] };
@@ -32,6 +34,7 @@ const el = <T extends HTMLElement = HTMLElement>(sel: string) => document.queryS
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const fmtPop = (v: number | null) => (v == null ? "-" : v.toLocaleString("ja-JP"));
 const fmtArea = (v: number | null) => (v == null ? "-" : v.toFixed(2));
+const ZERO_MARK = '<span class="note-mark" title="令和2年国勢調査では住民0人">※</span>';
 const pct = (n: number, total: number) => `${((n / total) * 100).toFixed(1)}%`;
 
 async function main() {
@@ -181,7 +184,7 @@ async function main() {
     return `<div class="popup">
       <div class="popup-title">${esc(is.name)}</div>
       <div class="popup-sub">${esc(is.pref)} ${esc(is.muni)}　${esc(LAW_LABEL[is.category] ?? is.category)}</div>
-      <div class="popup-sub">人口 ${fmtPop(is.pop)}${is.pop == null ? "" : " 人"}　面積 ${fmtArea(is.area)}${is.area == null ? "" : " km²"}</div>
+      <div class="popup-sub">人口 ${fmtPop(is.pop)}${is.pop == null ? "" : " 人"}${is.popZero ? ZERO_MARK : ""}　面積 ${fmtArea(is.area)}${is.area == null ? "" : " km²"}</div>
       <div class="seg seg-popup">${levelButtons(idx)}</div>
       <button type="button" class="link" data-goto-row="${idx}">一覧で見る</button>
     </div>`;
@@ -231,7 +234,7 @@ async function main() {
       <div class="cell-name"><button type="button" class="island-name" data-fly="${idx}">${esc(is.name)}</button></div>
       <div class="cell-muni">${withPref ? esc(is.pref) + " " : ""}${esc(is.muni)}</div>
       <div class="cell-law">${esc(LAW_LABEL[is.category] ?? is.category)}</div>
-      <div class="cell-num">${fmtPop(is.pop)}${is.pop == null ? "" : '<span class="unit">人</span>'}</div>
+      <div class="cell-num">${fmtPop(is.pop)}${is.pop == null ? "" : '<span class="unit">人</span>'}${is.popZero ? ZERO_MARK : ""}</div>
       <div class="cell-num">${fmtArea(is.area)}${is.area == null ? "" : '<span class="unit">km²</span>'}</div>
       <div class="seg">${levelButtons(idx)}</div>
     </div>`;

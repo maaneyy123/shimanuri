@@ -1,4 +1,4 @@
-population: MLIT 255, census blocks 152, Okinawa document 0, none 25
+population: MLIT 255, census blocks 152, census zero 7, Okinawa document 0, none 18
 area: MLIT 255, GSI 121, Okinawa document 7, none 49
 check, census rule on MLIT islands: value for 242, within 5% 237
 check, census rule on Okinawa islands (outside MLIT): value for 35, within 5% 35
@@ -29,7 +29,7 @@ islands outside the MLIT list:
 24007	三重県	賢島	志摩市	pop=95 (census blocks)	area=- (none)
 24008	三重県	横山島	志摩市	pop=- (none)	area=- (none)
 28006	兵庫県	淡路島	淡路市・洲本市・南あわじ市	pop=126695 (census blocks)	area=592.44 (gsi 淡路島 南あわじ市226.22 淡路市184.19 洲本市182.02)
-30001	和歌山県	中の島	那智勝浦町	pop=- (none)	area=- (none)
+30001	和歌山県	中の島	那智勝浦町	pop=0 (census zero (blocks without population cover 94%))	area=- (none)
 30002	和歌山県	大島	串本町	pop=1043 (census blocks)	area=9.47 (gsi 紀伊大島 串本町)
 32005	島根県	大根島	松江市	pop=3123 (census blocks)	area=6.71 (gsi 大根島・江島 松江市)
 32006	島根県	江島	松江市	pop=670 (census blocks)	area=6.71 (gsi 大根島・江島 松江市)
@@ -37,7 +37,7 @@ islands outside the MLIT list:
 33015	岡山県	鹿久居島	備前市	pop=11 (census blocks)	area=10.14 (gsi 鹿久居島 備前市)
 33016	岡山県	頭島	備前市	pop=362 (census blocks)	area=- (none)
 33017	岡山県	長島	瀬戸内市	pop=364 (census blocks)	area=3.51 (gsi 長島 瀬戸内市)
-33018	岡山県	黄島	瀬戸内市	pop=- (none)	area=- (none)
+33018	岡山県	黄島	瀬戸内市	pop=0 (census zero (blocks without population cover 98%))	area=- (none)
 33019	岡山県	黒島	瀬戸内市	pop=- (none)	area=- (none)
 34014	広島県	田島	福山市	pop=1327 (census blocks)	area=8.51 (gsi 田島 福山市)
 34015	広島県	横島	福山市	pop=921 (census blocks)	area=4.03 (gsi 横島 福山市)
@@ -71,7 +71,7 @@ islands outside the MLIT list:
 35029	山口県	彦島	下関市	pop=23632 (census blocks)	area=10.59 (gsi 彦島 下関市)
 35030	山口県	青海島	長門市	pop=1578 (census blocks)	area=14.82 (gsi 青海島 長門市)
 35031	山口県	角島	下関市	pop=650 (census blocks)	area=3.84 (gsi 角島 下関市)
-35032	山口県	黒髪島・仙島	周南市	pop=- (none)	area=5.36 (gsi 黒髪島・仙島 周南市)
+35032	山口県	黒髪島・仙島	周南市	pop=0 (census zero (blocks without population cover 100%))	area=5.36 (gsi 黒髪島・仙島 周南市)
 36003	徳島県	大毛島	鳴門市	pop=3007 (census blocks)	area=7.31 (gsi 大毛島 鳴門市)
 36004	徳島県	島田島	鳴門市	pop=373 (census blocks)	area=5.73 (gsi 島田島 鳴門市)
 36005	徳島県	竹ヶ島	海陽町	pop=- (none)	area=- (none)
@@ -186,7 +186,7 @@ islands outside the MLIT list:
 47045	沖縄県	伊計島	うるま市	pop=253 (census blocks)	area=1.72 (gsi 伊計島 うるま市)
 47046	沖縄県	浜比嘉島	うるま市	pop=373 (census blocks)	area=2.09 (gsi 浜比嘉島 うるま市)
 47047	沖縄県	奥武島	南城市	pop=740 (census blocks)	area=- (none)
-47048	沖縄県	瀬長島	豊見城市	pop=- (none)	area=- (none)
-47049	沖縄県	前島	渡嘉敷村	pop=- (none)	area=1.59 (gsi 前島 渡嘉敷村)
-47050	沖縄県	外離島	竹富町	pop=- (none)	area=1.32 (gsi 外離島 竹富町)
-47051	沖縄県	ナガンヌ島	渡嘉敷村	pop=- (none)	area=- (none)
+47048	沖縄県	瀬長島	豊見城市	pop=0 (census zero (blocks without population cover 90%))	area=- (none)
+47049	沖縄県	前島	渡嘉敷村	pop=0 (census zero (blocks without population cover 98%))	area=1.59 (gsi 前島 渡嘉敷村)
+47050	沖縄県	外離島	竹富町	pop=0 (census zero (blocks without population cover 97%))	area=1.32 (gsi 外離島 竹富町)
+47051	沖縄県	ナガンヌ島	渡嘉敷村	pop=0 (census zero (blocks without population cover 99%))	area=- (none)

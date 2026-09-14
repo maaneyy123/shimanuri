@@ -4,7 +4,10 @@
 // (X_CODE, Y_CODE) to the island (0 when inside). A block drawn as several polygons (one per islet) counts once, with
 // the area of all its polygons. Blocks along a coast often include sea, so the share alone can be low for blocks that
 // are entirely on the island.
-// Output: data/cache/census_part_overlap.json { id: { sig, parts: [[population, share, distance], ...] } }.
+// When no populated block touches an island, `covered` is the share of the island's area covered by blocks without
+// population: a high value means the 2020 census counted nobody on the island, a low one that the census blocks do not
+// cover the island shape.
+// Output: data/cache/census_part_overlap.json { id: { sig, parts: [[population, share, distance], ...], covered? } }.
 // An island whose shape is unchanged (same sig: bbox and area) keeps its previous result; others are recomputed.
 import fs from "fs";
 import path from "path";
@@ -37,9 +40,7 @@ async function blocksOf(code) {
     b.pop = Math.max(b.pop, p.JINKO || 0);
     b.parts.push(r.value);
   }
-  const list = [...byKey.values()]
-    .filter((b) => b.pop > 0)
-    .map((b) => ({ ...b, bb: turf.bbox(turf.featureCollection(b.parts)), area: b.parts.reduce((s, f) => s + turf.area(f), 0) }));
+  const list = [...byKey.values()].map((b) => ({ ...b, bb: turf.bbox(turf.featureCollection(b.parts)), area: b.parts.reduce((s, f) => s + turf.area(f), 0) }));
   blockCache.set(code, list);
   return list;
 }
@@ -49,32 +50,42 @@ let recomputed = 0;
 for (const isl of islands) {
   const id = isl.properties.id;
   const s = sig(isl);
-  if (previous[id]?.sig === s) {
-    res[id] = previous[id];
+  const prev = previous[id];
+  if (prev?.sig === s && (prev.parts.length > 0 || prev.covered != null)) {
+    res[id] = prev;
     continue;
   }
   const [a, b, c, d] = turf.bbox(isl);
-  const parts = [];
+  const near = [];
   for (const code of islandCodes[id] ?? []) {
-    for (const blk of await blocksOf(code)) {
-      if (blk.bb[0] > c || blk.bb[2] < a || blk.bb[1] > d || blk.bb[3] < b) continue;
-      let onIsland = 0;
-      for (const f of blk.parts) {
-        if (!turf.booleanIntersects(f, isl)) continue;
-        try {
-          const inter = turf.intersect(turf.featureCollection([f, isl]));
-          if (inter) onIsland += turf.area(inter);
-        } catch {
-          /* invalid geometry: counted as not on the island */
-        }
-      }
-      if (onIsland > 0) {
-        const dist = blk.pt ? Math.max(0, Math.round(turf.pointToPolygonDistance(blk.pt, isl, { units: "meters" }))) : null;
-        parts.push([blk.pop, +(onIsland / blk.area).toFixed(3), dist]);
+    for (const blk of await blocksOf(code)) if (!(blk.bb[0] > c || blk.bb[2] < a || blk.bb[1] > d || blk.bb[3] < b)) near.push(blk);
+  }
+  const areaOnIsland = (blk) => {
+    let onIsland = 0;
+    for (const f of blk.parts) {
+      if (!turf.booleanIntersects(f, isl)) continue;
+      try {
+        const inter = turf.intersect(turf.featureCollection([f, isl]));
+        if (inter) onIsland += turf.area(inter);
+      } catch {
+        /* invalid geometry: counted as not on the island */
       }
     }
+    return onIsland;
+  };
+  const parts = [];
+  for (const blk of near.filter((x) => x.pop > 0)) {
+    const onIsland = areaOnIsland(blk);
+    if (onIsland > 0) {
+      const dist = blk.pt ? Math.max(0, Math.round(turf.pointToPolygonDistance(blk.pt, isl, { units: "meters" }))) : null;
+      parts.push([blk.pop, +(onIsland / blk.area).toFixed(3), dist]);
+    }
   }
-  res[id] = { sig: s, parts };
+  if (parts.length) res[id] = { sig: s, parts };
+  else {
+    const covered = near.filter((x) => x.pop === 0).reduce((sum, blk) => sum + areaOnIsland(blk), 0) / turf.area(isl);
+    res[id] = { sig: s, parts, covered: +Math.min(1, covered).toFixed(3) };
+  }
   recomputed++;
 }
 fs.writeFileSync(outFile, JSON.stringify(res));

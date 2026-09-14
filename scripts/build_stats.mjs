@@ -6,7 +6,9 @@
 //      scripts/compute_census_overlap.mjs): sum of populated blocks whose representative point is within NEAR_M of
 //      the island or with at least 50% of their area on it. If the other blocks with more than 5% of their area on the
 //      island hold more than 1% of that sum, no value.
-//   3. Otherwise 沖縄県「離島関係資料」 for the islands designated under the Okinawa act (scripts/okinawa_islands.json).
+//   3. Otherwise 0 when no populated block touches the island and blocks without population cover at least 90% of it
+//      (the 2020 census counted nobody there; the island is on the inhabited-island lists). Marked popZero, shown with a note.
+//   4. Otherwise 沖縄県「離島関係資料」 for the islands designated under the Okinawa act (scripts/okinawa_islands.json).
 // area
 //   MLIT list, otherwise GSI 令和8年全国都道府県市区町村別面積調 付3 島面積 (islands of 1 km2 or more),
 //   otherwise 沖縄県「離島関係資料」, otherwise none.
@@ -52,6 +54,8 @@ function censusPop(id) {
   const unclear = parts.filter((x) => !counted(x) && x[1] > AMBIGUOUS).reduce((s, [p]) => s + p, 0);
   return pop > 0 && unclear <= AMBIGUOUS_TOLERANCE * pop ? pop : null;
 }
+const ZERO_COVERED = 0.9;
+const censusZero = (id) => overlap[id]?.parts.length === 0 && (overlap[id].covered ?? 0) >= ZERO_COVERED;
 
 function gsiArea(is) {
   const names = new Set([...is.name.split("・"), ...(OSM_ALIASES[is.id] ?? []), ...(GSI_ALIASES[is.id] ?? [])].map(key));
@@ -64,7 +68,7 @@ function gsiArea(is) {
 }
 
 const within = (a, b, tol) => Math.abs(a - b) <= tol * Math.max(b, 1);
-const tally = { popMlit: 0, popCensus: 0, popOkinawa: 0, popNone: 0, areaMlit: 0, areaGsi: 0, areaOkinawa: 0, areaNone: 0 };
+const tally = { popMlit: 0, popCensus: 0, popZero: 0, popOkinawa: 0, popNone: 0, areaMlit: 0, areaGsi: 0, areaOkinawa: 0, areaNone: 0 };
 const lines = [];
 const checks = { mlitGiven: 0, mlitWithin5: 0, mlitOff: [], okinawaGiven: 0, okinawaWithin5: 0, okinawaOff: [] };
 for (const is of data.islands) {
@@ -72,6 +76,7 @@ for (const is of data.islands) {
   const c = censusPop(is.id);
   const ok = okinawa[is.id];
   let popNote;
+  delete is.popZero;
   if (m) {
     is.pop = m.pop;
     tally.popMlit++;
@@ -85,6 +90,11 @@ for (const is of data.islands) {
     is.pop = c;
     tally.popCensus++;
     popNote = "census blocks";
+  } else if (censusZero(is.id)) {
+    is.pop = 0;
+    is.popZero = true;
+    tally.popZero++;
+    popNote = `census zero (blocks without population cover ${Math.round(overlap[is.id].covered * 100)}%)`;
   } else if (ok?.pop != null) {
     is.pop = ok.pop;
     tally.popOkinawa++;
@@ -123,7 +133,7 @@ for (const is of data.islands) {
 
 fs.writeFileSync(rel("web/public/data/islands.json"), JSON.stringify(data));
 const summary = [
-  `population: MLIT ${tally.popMlit}, census blocks ${tally.popCensus}, Okinawa document ${tally.popOkinawa}, none ${tally.popNone}`,
+  `population: MLIT ${tally.popMlit}, census blocks ${tally.popCensus}, census zero ${tally.popZero}, Okinawa document ${tally.popOkinawa}, none ${tally.popNone}`,
   `area: MLIT ${tally.areaMlit}, GSI ${tally.areaGsi}, Okinawa document ${tally.areaOkinawa}, none ${tally.areaNone}`,
   `check, census rule on MLIT islands: value for ${checks.mlitGiven}, within 5% ${checks.mlitWithin5}`,
   `check, census rule on Okinawa islands (outside MLIT): value for ${checks.okinawaGiven}, within 5% ${checks.okinawaWithin5}`,

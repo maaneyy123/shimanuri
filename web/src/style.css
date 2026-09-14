@@ -57,6 +57,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .cell-num { text-align: right; font-variant-numeric: tabular-nums; font-size: 0.95rem; white-space: nowrap; }
 .row-head .cell-num { font-size: 0.8rem; }
 .unit { color: var(--muted); font-size: 0.75rem; margin-left: 0.15rem; }
+.note-mark { color: var(--muted); font-size: 0.7rem; margin-left: 0.1rem; vertical-align: super; cursor: help; }
 .seg-head { text-align: center; }
 
 /* level buttons: pale tint until chosen, full color when chosen */
