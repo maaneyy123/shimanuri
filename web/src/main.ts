@@ -249,7 +249,8 @@ async function main() {
   const sortHead = (field: SortField, label: string) => {
     const [activeField, dir] = sortMode.split("-") as [SortField, SortDir];
     const active = activeField === field;
-    const mark = active ? (dir === "asc" ? "▲" : "▼") : "↕";
+    // ▼ = the order a first press gives (north first, 離島振興法 first, largest first), ▲ = its reverse
+    const mark = active ? (dir === SORT_FIRST_DIR[field] ? "▼" : "▲") : "↕";
     return `<button type="button" class="sort-head${active ? " active" : ""}" data-sort="${field}" title="押すと並び替え">${label}<span class="sort-mark" aria-hidden="true">${mark}</span></button>`;
   };
   const headerHtml = () => `<div class="row row-head">
