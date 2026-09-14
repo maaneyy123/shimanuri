@@ -2,6 +2,7 @@
 //   web/public/data/islands.json      island list in URL-code order, with a representative point
 //   data/cache/islands_raw.geojson    island polygons (simplified into web/public/data/islands.geojson by mapshaper)
 //   data/cache/need_fallback.json     islands without an Overpass match (input for scripts/fetch_nominatim.mjs)
+//   data/cache/need_coast.json        islands whose shape needs OSM coastline data (input for scripts/fetch_coast_polygons.mjs)
 //   data/geo_report.txt               islands that need a manual look
 // Matching: OSM place=island|islet features with the island's name (or an alias in scripts/osm_aliases.json)
 // whose position falls in one of the listed municipalities. The municipality of a position is taken from the
@@ -81,8 +82,12 @@ const versions = previous?.versions ?? { A: order.length };
 if (versions[version] !== order.length) throw new Error(`island count changed (${versions[version]} -> ${order.length}): add a new version char`);
 
 const masterById = new Map(master.map((m) => [m.id, m]));
-// known areas (km2, from scripts/build_stats.mjs) help pick the right unnamed coastline ring
-const previousArea = new Map((previous?.islands ?? []).filter((i) => i.area != null).map((i) => [i.id, i.area]));
+// known areas (km2, from scripts/build_stats.mjs) help pick the right unnamed coastline ring; population and area are
+// carried over so that running this script again does not lose them
+const previousById = new Map((previous?.islands ?? []).map((i) => [i.id, i]));
+const previousArea = new Map([...previousById.values()].filter((i) => i.area != null).map((i) => [i.id, i.area]));
+const needCoast = new Set();
+const hasCoast = (id) => fs.existsSync(rel("data/cache/coast", `${id}.json`));
 
 // For point-only islands: single polygons near the point from OSM (data/cache/coast/<id>.json,
 // scripts/fetch_coast_polygons.mjs): parts of island/islet multipolygons, closed coastline ways, and rings
@@ -148,11 +153,20 @@ function landPolygonsAt(id, pt) {
 const overrideShape = {};
 for (const [id, ov] of Object.entries(OVERRIDES)) {
   if (!ov.point || (!ov.estatKey && !ov.landBox && !ov.waterBbox)) continue;
-  const land = landPolygonsAt(ov.landFrom ?? id, ov.point)[0];
+  const landId = ov.landFrom ?? id;
+  const needsLand = Boolean(ov.waterBbox || ov.landBox || ov.clipToLand);
+  const waterFile = rel("data/cache/water", `${id}.json`);
+  if ((needsLand && !hasCoast(landId)) || (ov.waterBbox && !fs.existsSync(waterFile))) {
+    // first run: the coastline or water data is fetched after this script lists what it needs
+    if (needsLand && !hasCoast(landId)) needCoast.add(landId);
+    console.error(`shape override for ${id} waits for data/cache/coast/${landId}.json${ov.waterBbox ? ` and data/cache/water/${id}.json` : ""}`);
+    continue;
+  }
+  const land = landPolygonsAt(landId, ov.point)[0];
   let shape = null;
   if (ov.waterBbox && land) {
     // land minus the water areas drawn on top of it (channels between islands)
-    const water = osmtogeojson(JSON.parse(fs.readFileSync(rel("data/cache/water", `${id}.json`), "utf8"))).features.filter((f) => f.geometry.type.includes("Polygon"));
+    const water = osmtogeojson(JSON.parse(fs.readFileSync(waterFile, "utf8"))).features.filter((f) => f.geometry.type.includes("Polygon"));
     shape = land;
     for (const w of water) shape = turf.difference(turf.featureCollection([shape, w])) ?? shape;
   } else if (ov.estatKey) {
@@ -260,6 +274,7 @@ for (const [idx, id] of order.entries()) {
   }
   let coast = null;
   if (!geom && point) {
+    if (!hasCoast(id)) needCoast.add(id);
     coast = coastRing(id, point, previousArea.get(id));
     if (!coast) notes.push("point only (no polygon)");
   }
@@ -276,6 +291,8 @@ for (const [idx, id] of order.entries()) {
     lon: point ? +point[0].toFixed(5) : null,
     lat: point ? +point[1].toFixed(5) : null,
     shape: Boolean(geom),
+    pop: previousById.get(id)?.pop ?? null,
+    area: previousById.get(id)?.area ?? null,
   });
 }
 
@@ -317,6 +334,7 @@ for (const [id, ov] of Object.entries(OVERRIDES)) {
 
 fs.writeFileSync(rel("data/cache/islands_raw.geojson"), JSON.stringify(turf.featureCollection(polygons)));
 fs.writeFileSync(rel("data/cache/need_fallback.json"), JSON.stringify(needFallback, null, 1));
+fs.writeFileSync(rel("data/cache/need_coast.json"), JSON.stringify([...needCoast].sort()));
 fs.writeFileSync(outJson, JSON.stringify({ version, versions, islands: outIslands }));
 fs.writeFileSync(rel("data/geo_report.txt"), "id\tpref\tname\tmuni\tsource\tnotes\n" + report.join("\n") + "\n");
 const count = (s) => outIslands.filter(s).length;

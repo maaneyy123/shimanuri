@@ -1,14 +1,15 @@
-// For islands that only have a point (no named OSM polygon), fetches OSM coastline ways and island/islet
-// polygons within 1.5 km of the point. Raw responses: data/cache/coast/<id>.json. scripts/build_geo.mjs picks
-// the ring that contains the point, or the nearest ring whose area fits the known area.
+// For the islands listed in data/cache/need_coast.json by scripts/build_geo.mjs (islands with only a point, and the
+// land used by shape overrides), fetches OSM coastline ways and island/islet polygons around the point.
+// Raw responses: data/cache/coast/<id>.json. scripts/build_geo.mjs picks the ring that contains the point.
 import fs from "fs";
 import path from "path";
 const root = path.resolve(import.meta.dirname, "..");
 const dir = path.join(root, "data/cache/coast");
 fs.mkdirSync(dir, { recursive: true });
 const islands = JSON.parse(fs.readFileSync(path.join(root, "web/public/data/islands.json"), "utf8")).islands;
+const need = new Set(JSON.parse(fs.readFileSync(path.join(root, "data/cache/need_coast.json"), "utf8")));
 const UA = "shimanuri-data-build/0.1 (personal non-commercial island map)";
-for (const is of islands.filter((i) => !i.shape && i.lat != null)) {
+for (const is of islands.filter((i) => need.has(i.id) && i.lat != null)) {
   const file = path.join(dir, `${is.id}.json`);
   if (fs.existsSync(file)) continue;
   // big islands have their coastline split into several ways; the radius must reach all of them

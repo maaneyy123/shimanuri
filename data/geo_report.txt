@@ -30,7 +30,7 @@ id	pref	name	muni	source	notes
 43015	熊本県	天草上島	上天草市・天草市	nominatim	
 43017	熊本県	天草下島	天草市・苓北町	nominatim	
 45001	宮崎県	島野浦島	延岡市	nominatim	
-47034	沖縄県	新城島上地	竹富町	manual	令和2年国勢調査 小地域 竹富町字新城のうち人口のある北側の区画の代表点; shape from OSM coastline (1.76 km2, known -)
-47035	沖縄県	新城島下地	竹富町	manual	OSM "新城島下地" found only in 宮古島市; 令和2年国勢調査 小地域 竹富町字新城のうち南側の区画の代表点; shape from OSM coastline (1.56 km2, known -)
+47034	沖縄県	新城島上地	竹富町	manual	令和2年国勢調査 小地域 竹富町字新城のうち人口のある北側の区画の代表点; shape from OSM coastline (1.76 km2, known 1.76)
+47035	沖縄県	新城島下地	竹富町	manual	OSM "新城島下地" found only in 宮古島市; 令和2年国勢調査 小地域 竹富町字新城のうち南側の区画の代表点; shape from OSM coastline (1.56 km2, known 1.57)
 47037	沖縄県	嘉弥真島	竹富町	nominatim	
 47048	沖縄県	瀬長島	豊見城市	override	瀬長島: 位置は国土地理院 地名検索。OpenStreetMap では沖縄本島（那覇空港の埋立地と海中道路）と1つの形につながっているため、地理院タイル白地図で見える島の海岸線の範囲（道路の付け根まで）で陸地を切り取る

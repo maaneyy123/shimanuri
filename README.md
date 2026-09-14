@@ -34,15 +34,16 @@
 |---|---|---|
 | 島の形と位置 | © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors（Overpass API、Nominatim で取得） | 加工して作成（ODbL） |
 | 離島振興法の島の一覧・人口・面積 | 国土交通省「離島振興対策実施地域一覧」「日本の島嶼の構成」（令和8年4月1日現在） | 公共データ利用規約（第1.0版）に基づき加工して作成 |
-| 人口（離島振興法以外の島）、所在市町村の判定、一部の島の形 | 総務省統計局「令和2年国勢調査」町丁・字等別境界データ（政府統計の総合窓口(e-Stat) https://www.e-stat.go.jp/） | 政府標準利用規約（第2.0版）に基づき加工して作成 |
+| 人口（離島振興法以外の島）、所在市町村の判定、一部の島の形 | 総務省統計局「令和2年国勢調査」基本単位区別境界データ・町丁・字等別境界データ（政府統計の総合窓口(e-Stat) https://www.e-stat.go.jp/） | 政府標準利用規約（第2.0版）に基づき加工して作成 |
 | 面積（離島振興法以外の島） | 「令和8年全国都道府県市区町村別面積調」付3 島面積（国土地理院）（https://www.gsi.go.jp/KOKUJYOHO/MENCHO-title.htm） | もとに作成 |
+| 人口・面積（上の資料で出せない沖縄の島） | 沖縄県「離島関係資料」（令和6年3月） | 島ごとの数値のみ使用（`scripts/okinawa_islands.json`） |
 | 一部の島の位置 | 国土地理院 地名検索、Wikipedia | 座標のみ使用 |
 | 島名・区分の参照 | 沖縄県「離島関係資料」、鹿児島県「奄美群島の概況」、離島経済新聞「有人離島一覧」 | 島名と区分のみ使用。資料そのものは含めていません |
 | 背景地図 | 地理院タイル（白地図・淡色地図） | 表示時に読み込み |
 
 ## 開発
 
-必要なもの: Node.js 24、Python 3.12（PyMuPDF）
+必要なもの: Node.js 24
 
 ```bash
 npm install
@@ -51,20 +52,40 @@ npm test         # URL符号化のテスト
 npm run build    # dist/ に出力
 ```
 
-島データの作り直し。島の一覧 `data/islands_master.csv`（識別番号・都道府県・島名・市町村・区分・諸島）から、形・人口・面積を作ります。`data/sources/` と `data/cache/` はリポジトリに含めず、次のコマンドで取得します。
+`scripts/shot.mjs`（開発サーバーの画面をヘッドレスブラウザで撮影）を使うときは、先に `npx playwright install chromium` を実行します。
+
+## 島データの作り直し
+
+必要なもの: Node.js 24、Python 3.12 と PyMuPDF（`pip install pymupdf`）
+
+入力はリポジトリにある次のファイルです。
+
+| ファイル | 内容 |
+|---|---|
+| `data/islands_master.csv` | 島の一覧（識別番号・都道府県・島名・市町村・区分・諸島） |
+| `web/public/data/islands.json` | リンクに入れる島の並び順と版。消さないでください（消すと、それまでのリンクが別の島を指します）。前回の面積は、名前の無い海岸線から島の形を選ぶときにも使います |
+| `scripts/osm_aliases.json`、`scripts/manual_points.json`、`scripts/shape_overrides.json` | OpenStreetMap での別名、手作業の位置、手作業の形の修正 |
+| `scripts/okinawa_islands.json` | 沖縄県「離島関係資料」の島ごとの人口・面積 |
+
+`data/sources/`（取得した資料）と `data/cache/`（途中結果）はリポジトリに含めません。次のコマンドを上から順に実行すると作られます。
 
 ```bash
-node scripts/fetch_sources.mjs
-node scripts/fetch_estat_boundaries.mjs
-node scripts/fetch_osm_islands.mjs
-node scripts/build_geo.mjs
-node scripts/fetch_nominatim.mjs
-node scripts/fetch_coast_polygons.mjs
-node scripts/fetch_water_polygons.mjs
-node scripts/build_geo.mjs
+node scripts/fetch_sources.mjs            # 国交省の一覧、国土地理院の面積調
+node scripts/fetch_estat_boundaries.mjs   # 国勢調査の境界（町丁・字等、基本単位区）を取得して展開
+node scripts/fetch_osm_islands.mjs        # OpenStreetMap の島（都道府県ごと）
+node scripts/build_geo.mjs                # 1回目: 名前で位置と形を決め、名前で見つからない島を書き出す
+node scripts/fetch_nominatim.mjs          # 名前で見つからなかった島を Nominatim で探す
+node scripts/build_geo.mjs                # 2回目: Nominatim の結果を入れ、海岸線が要る島を書き出す
+node scripts/fetch_coast_polygons.mjs     # 点だけの島と手作業の修正に使う海岸線
+node scripts/fetch_water_polygons.mjs     # 手作業の修正に使う島の間の水路
+node scripts/build_geo.mjs                # 3回目: 形を仕上げる
 npx mapshaper -i data/cache/islands_raw.geojson -simplify dp interval=30 keep-shapes -o precision=0.00001 format=geojson web/public/data/islands.geojson
 python scripts/extract_mlit_stats.py
 python scripts/extract_gsi_island_areas.py
-node scripts/compute_census_overlap.mjs
-node scripts/build_stats.mjs
+node scripts/compute_census_overlap.mjs   # 島と基本単位区の重なり（形が変わった島だけ計算し直す）
+node scripts/build_stats.mjs              # 人口と面積を入れ、data/stats_report.txt に記録
 ```
+
+- 取得先の負荷を抑えるため、e-Stat は1.5秒、Nominatim は1秒、Overpass は数秒おきに1件ずつ取得します。
+- OpenStreetMap は日々更新されるので、同じ手順でも島の形が公開中のファイルと変わることがあります。公開中のデータは 2026-09-14 に取得したものです。
+- 結果の確認: `data/geo_report.txt`（形と位置の出どころ）、`data/stats_report.txt`（人口・面積の出どころと、国勢調査から出した人口と国交省・沖縄県の値の比較）。`python scripts/check_areas.py` のあと `node scripts/check_areas.mjs` を実行すると、形の面積と国交省の一覧の面積を比べます。
