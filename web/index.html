@@ -48,7 +48,10 @@
       <div class="sorter">
         <label>並び順
           <select id="sort">
-            <option value="pref" selected>都道府県順</option>
+            <option value="pref-asc" selected>都道府県順（北から）</option>
+            <option value="pref-desc">都道府県順（南から）</option>
+            <option value="law-asc">対象の法律順（離島振興法から）</option>
+            <option value="law-desc">対象の法律順（対象外から）</option>
             <option value="pop-desc">人口の多い順</option>
             <option value="pop-asc">人口の少ない順</option>
             <option value="area-desc">面積の広い順</option>
@@ -56,6 +59,7 @@
           </select>
         </label>
         <label class="check"><input type="checkbox" id="filter-unvisited" />未踏だけ</label>
+        <span class="sort-hint">表の見出し（市町村・対象の法律・人口・面積）を押しても並び替えられます</span>
       </div>
       <div id="list"></div>
 

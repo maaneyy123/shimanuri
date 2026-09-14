@@ -59,6 +59,13 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .unit { color: var(--muted); font-size: 0.75rem; margin-left: 0.15rem; }
 .note-mark { color: var(--muted); font-size: 0.7rem; margin-left: 0.1rem; vertical-align: super; cursor: help; }
 .seg-head { text-align: center; }
+/* column headers that sort the list: ↕ on the others, ▲/▼ on the active one */
+.sort-head { border: 0; background: none; padding: 0.1rem 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem; }
+.sort-head:hover { color: var(--accent); text-decoration: underline; }
+.sort-head.active { color: var(--ink); font-weight: 700; }
+.sort-mark { font-size: 0.7rem; color: #a3b0b8; text-decoration: none; }
+.sort-head.active .sort-mark { color: var(--accent); }
+.sort-hint { color: var(--muted); font-size: 0.8rem; }
 
 /* level buttons: pale tint until chosen, full color when chosen */
 .seg { display: grid; grid-template-columns: repeat(6, minmax(3.2rem, 1fr)); gap: 4px; }
@@ -75,6 +82,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
   .pane { padding: 0 0.5rem 1.5rem; }
   .row { grid-template-columns: 1fr auto auto; grid-template-areas: "name pop area" "muni muni law" "seg seg seg"; }
   .row-head { display: none; }
+  .sort-hint { display: none; } /* column headers are hidden on narrow screens; the pull-down remains */
   .cell-name { grid-area: name; }
   .cell-muni { grid-area: muni; }
   .cell-law { grid-area: law; text-align: right; }

@@ -3,7 +3,7 @@ import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
 import { decodeLevels, encodeLevels } from "./codec";
-import { LAW_LABEL, LEVELS, colorOf, levelColorExpression } from "./levels";
+import { LAW_LABEL, LAW_ORDER, LEVELS, colorOf, levelColorExpression } from "./levels";
 
 type Island = {
   id: string;
@@ -21,7 +21,11 @@ type Island = {
   area: number | null;
 };
 type IslandData = { version: string; versions: Record<string, number>; islands: Island[] };
-type SortMode = "pref" | "pop-desc" | "pop-asc" | "area-desc" | "area-asc";
+type SortField = "pref" | "law" | "pop" | "area";
+type SortDir = "asc" | "desc";
+type SortMode = `${SortField}-${SortDir}`;
+// direction used when a column header is pressed for the first time
+const SORT_FIRST_DIR: Record<SortField, SortDir> = { pref: "asc", law: "asc", pop: "desc", area: "desc" };
 
 const BASE = import.meta.env.BASE_URL;
 const STORAGE_KEY = "shimanuri:levels";
@@ -239,34 +243,50 @@ async function main() {
       <div class="seg">${levelButtons(idx)}</div>
     </div>`;
   };
-  const headerHtml = `<div class="row row-head" aria-hidden="true">
-      <div class="cell-name">島名</div><div class="cell-muni">市町村</div><div class="cell-law">対象の法律</div>
-      <div class="cell-num">人口</div><div class="cell-num">面積</div><div class="seg-head">レベル</div>
-    </div>`;
-
   const list = el("#list");
-  let sortMode: SortMode = "pref";
+  let sortMode: SortMode = "pref-asc";
+  // column headers sort the list too: first press uses SORT_FIRST_DIR, pressing the active column again flips it
+  const sortHead = (field: SortField, label: string) => {
+    const [activeField, dir] = sortMode.split("-") as [SortField, SortDir];
+    const active = activeField === field;
+    const mark = active ? (dir === "asc" ? "▲" : "▼") : "↕";
+    return `<button type="button" class="sort-head${active ? " active" : ""}" data-sort="${field}" title="押すと並び替え">${label}<span class="sort-mark" aria-hidden="true">${mark}</span></button>`;
+  };
+  const headerHtml = () => `<div class="row row-head">
+      <div class="cell-name">島名</div><div class="cell-muni">${sortHead("pref", "市町村")}</div><div class="cell-law">${sortHead("law", "対象の法律")}</div>
+      <div class="cell-num">${sortHead("pop", "人口")}</div><div class="cell-num">${sortHead("area", "面積")}</div><div class="seg-head">レベル</div>
+    </div>`;
+  const lawRank = (idx: number) => {
+    const r = LAW_ORDER.indexOf(islands[idx].category);
+    return r < 0 ? LAW_ORDER.length : r;
+  };
+  const byId = (a: number, b: number) => islands[a].id.localeCompare(islands[b].id);
+
   function renderList() {
-    if (sortMode === "pref") {
-      list.innerHTML = prefOrder
+    const [field, dir] = sortMode.split("-") as [SortField, SortDir];
+    if (field === "pref") {
+      const flip = <T,>(xs: T[]) => (dir === "desc" ? [...xs].reverse() : xs);
+      const header = headerHtml();
+      list.innerHTML = flip(prefOrder)
         .map((pref) => {
-          const groups = [...byPref.get(pref)!.entries()];
+          const groups = flip([...byPref.get(pref)!.entries()]);
           return `<section class="pref">
             <h3>${esc(pref)} <span class="count" data-count-pref="${esc(pref)}"></span></h3>
-            ${headerHtml}
-            ${groups.map(([group, idxs]) => `<div class="group"><h4>${esc(group)}</h4>${idxs.map((idx) => rowHtml(idx, false)).join("")}</div>`).join("")}
+            ${header}
+            ${groups.map(([group, idxs]) => `<div class="group"><h4>${esc(group)}</h4>${flip(idxs).map((idx) => rowHtml(idx, false)).join("")}</div>`).join("")}
           </section>`;
         })
         .join("");
     } else {
-      const [field, dir] = sortMode.split("-") as ["pop" | "area", "desc" | "asc"];
+      const sign = dir === "asc" ? 1 : -1;
       const idxs = [...islands.keys()].sort((a, b) => {
+        if (field === "law") return sign * (lawRank(a) - lawRank(b)) || byId(a, b);
         const va = islands[a][field];
         const vb = islands[b][field];
-        if (va == null || vb == null) return va == null ? (vb == null ? 0 : 1) : -1; // no value: always last
-        return dir === "desc" ? vb - va : va - vb;
+        if (va == null || vb == null) return va == null ? (vb == null ? byId(a, b) : 1) : -1; // no value: always last
+        return sign * (va - vb) || byId(a, b);
       });
-      list.innerHTML = `<section class="pref">${headerHtml}${idxs.map((idx) => rowHtml(idx, true)).join("")}</section>`;
+      list.innerHTML = `<section class="pref">${headerHtml()}${idxs.map((idx) => rowHtml(idx, true)).join("")}</section>`;
     }
     islands.forEach((_, idx) => refreshRow(idx));
     renderSummary();
@@ -286,6 +306,13 @@ async function main() {
 
   list.addEventListener("click", (e) => {
     const t = e.target as HTMLElement;
+    const head = t.closest<HTMLButtonElement>("button[data-sort]");
+    if (head) {
+      const field = head.dataset.sort as SortField;
+      const [activeField, dir] = sortMode.split("-") as [SortField, SortDir];
+      setSort(`${field}-${activeField === field ? (dir === "asc" ? "desc" : "asc") : SORT_FIRST_DIR[field]}`);
+      return;
+    }
     const btn = t.closest<HTMLButtonElement>("button[data-v]");
     if (btn) setLevel(Number(btn.dataset.idx), Number(btn.dataset.v));
     const fly = t.closest<HTMLButtonElement>("button[data-fly]");
@@ -316,10 +343,13 @@ async function main() {
     document.getElementById(`row-${idx}`)?.style.setProperty("--row-color", colorOf(levels[idx]));
   }
 
-  el<HTMLSelectElement>("#sort").addEventListener("change", (e) => {
-    sortMode = (e.target as HTMLSelectElement).value as SortMode;
+  const sortSelect = el<HTMLSelectElement>("#sort");
+  function setSort(mode: SortMode) {
+    sortMode = mode;
+    sortSelect.value = mode; // the pull-down and the column headers show the same order
     renderList();
-  });
+  }
+  sortSelect.addEventListener("change", () => setSort(sortSelect.value as SortMode));
 
   // ---------- summary ----------
   function renderSummary() {
