@@ -7,7 +7,8 @@
 //      the island or with at least 50% of their area on it. If the other blocks with more than 5% of their area on the
 //      island hold more than 1% of that sum, no value.
 //   3. Otherwise 0 when no populated block touches the island and blocks without population cover at least 90% of it
-//      (the 2020 census counted nobody there; the island is on the inhabited-island lists). Marked popZero, shown with a note.
+//      (the 2020 census counted nobody there). Marked popZero, with the per-island note from scripts/census_zero_notes.json
+//      (which earlier census or resident register recorded residents); the build stops if an island has no note.
 //   4. Otherwise 沖縄県「離島関係資料」 for the islands designated under the Okinawa act (scripts/okinawa_islands.json).
 // area
 //   MLIT list, otherwise GSI 令和8年全国都道府県市区町村別面積調 付3 島面積 (islands of 1 km2 or more),
@@ -26,6 +27,7 @@ const mlit = readJson("data/cache/mlit_stats.json");
 const gsi = readJson("data/cache/gsi_island_areas.json");
 const overlap = readJson("data/cache/census_part_overlap.json");
 const okinawa = readJson("scripts/okinawa_islands.json").islands;
+const zeroNotes = readJson("scripts/census_zero_notes.json").notes;
 const OSM_ALIASES = readJson("scripts/osm_aliases.json");
 // names used in the GSI table: 奄美大島 is 大島, 大島 (串本町) is 紀伊大島
 const GSI_ALIASES = { "46021": ["大島"], "30002": ["紀伊大島"] };
@@ -70,6 +72,7 @@ function gsiArea(is) {
 const within = (a, b, tol) => Math.abs(a - b) <= tol * Math.max(b, 1);
 const tally = { popMlit: 0, popCensus: 0, popZero: 0, popOkinawa: 0, popNone: 0, areaMlit: 0, areaGsi: 0, areaOkinawa: 0, areaNone: 0 };
 const lines = [];
+const missingNotes = [];
 const checks = { mlitGiven: 0, mlitWithin5: 0, mlitOff: [], okinawaGiven: 0, okinawaWithin5: 0, okinawaOff: [] };
 for (const is of data.islands) {
   const m = mlit[is.id];
@@ -77,6 +80,7 @@ for (const is of data.islands) {
   const ok = okinawa[is.id];
   let popNote;
   delete is.popZero;
+  delete is.popNote;
   if (m) {
     is.pop = m.pop;
     tally.popMlit++;
@@ -93,6 +97,8 @@ for (const is of data.islands) {
   } else if (censusZero(is.id)) {
     is.pop = 0;
     is.popZero = true;
+    if (zeroNotes[is.id]) is.popNote = zeroNotes[is.id];
+    else missingNotes.push(`${is.id} ${is.name}(${is.muni})`);
     tally.popZero++;
     popNote = `census zero (blocks without population cover ${Math.round(overlap[is.id].covered * 100)}%)`;
   } else if (ok?.pop != null) {
@@ -131,6 +137,13 @@ for (const is of data.islands) {
   if (!m) lines.push(`${is.id}\t${is.pref}\t${is.name}\t${is.muni}\tpop=${is.pop ?? "-"} (${popNote})\tarea=${is.area ?? "-"} (${areaNote})`);
 }
 
+const unusedNotes = Object.keys(zeroNotes).filter((id) => !data.islands.some((is) => is.id === id && is.popZero));
+if (missingNotes.length || unusedNotes.length) {
+  // islands.json is left unchanged so the site never shows 0 without its note
+  if (missingNotes.length) console.error(`census zero without a note in scripts/census_zero_notes.json:\n  ${missingNotes.join("\n  ")}`);
+  if (unusedNotes.length) console.error(`notes in scripts/census_zero_notes.json for islands that are not census zero: ${unusedNotes.join(", ")}`);
+  process.exit(1);
+}
 fs.writeFileSync(rel("web/public/data/islands.json"), JSON.stringify(data));
 const summary = [
   `population: MLIT ${tally.popMlit}, census blocks ${tally.popCensus}, census zero ${tally.popZero}, Okinawa document ${tally.popOkinawa}, none ${tally.popNone}`,
