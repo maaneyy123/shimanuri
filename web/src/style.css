@@ -51,6 +51,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 /* one island per row: name | municipality | law | population | area | level buttons */
 .row { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem; align-items: center; gap: 0.25rem 0.75rem; padding: 0.35rem 0 0.35rem 0.5rem; border-left: 6px solid var(--row-color, #fff); border-top: 1px solid #eef2f4; }
 .row-head { border-left-color: transparent; border-top: 0; font-size: 0.8rem; color: var(--muted); padding-top: 0; padding-bottom: 0.1rem; }
+.row[hidden] { display: none; } /* display: grid above would otherwise keep rows hidden by the level filter on screen */
 .row.flash { background: #fff6cc; transition: background 0.3s; }
 .island-name { border: 0; background: none; padding: 0; text-align: left; color: var(--accent); cursor: pointer; font-weight: 700; font-size: 1rem; }
 .cell-muni, .cell-law { color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
