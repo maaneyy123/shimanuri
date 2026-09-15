@@ -57,7 +57,13 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .cell-num { text-align: right; font-variant-numeric: tabular-nums; font-size: 0.95rem; white-space: nowrap; }
 .row-head .cell-num { font-size: 0.8rem; }
 .unit { color: var(--muted); font-size: 0.75rem; margin-left: 0.15rem; }
-.note-mark { color: var(--muted); font-size: 0.7rem; margin-left: 0.1rem; vertical-align: super; cursor: help; }
+/* ※ with its note: shown on mouse-over (devices with a mouse), on a press (.open) and on keyboard focus */
+.note-mark { position: relative; border: 0; background: none; padding: 0 0.1rem; margin-left: 0.05rem; font: inherit; font-size: 0.7rem; line-height: 1; color: var(--muted); vertical-align: super; cursor: help; }
+.note-mark::before { content: ""; position: absolute; inset: -12px -8px; } /* larger area to press on phones */
+.note-pop { display: none; position: absolute; right: -0.4rem; top: calc(100% + 6px); z-index: 30; width: max-content; max-width: min(18rem, calc(100vw - 2rem)); padding: 0.4rem 0.6rem; border-radius: 6px; background: var(--ink); color: #fff; font-size: 0.8rem; font-weight: normal; line-height: 1.5; text-align: left; white-space: normal; vertical-align: baseline; }
+.note-mark.above .note-pop { top: auto; bottom: calc(100% + 6px); }
+.note-mark.open .note-pop, .note-mark:focus-visible .note-pop { display: block; }
+@media (hover: hover) { .note-mark:hover .note-pop { display: block; } }
 .seg-head { text-align: center; }
 /* column headers that sort the list: ↕ on the others, ▲/▼ on the active one */
 .sort-head { border: 0; background: none; padding: 0.1rem 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem; }

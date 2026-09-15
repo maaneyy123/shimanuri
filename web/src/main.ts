@@ -39,8 +39,11 @@ const el = <T extends HTMLElement = HTMLElement>(sel: string) => document.queryS
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const fmtPop = (v: number | null) => (v == null ? "-" : v.toLocaleString("ja-JP"));
 const fmtArea = (v: number | null) => (v == null ? "-" : v.toFixed(2));
-// ※ after "0 人"; the note shows on mouse-over
-const zeroMark = (is: Island) => (is.popZero ? `<span class="note-mark" title="${esc(is.popNote ?? "令和2年国勢調査では住民0人")}">※</span>` : "");
+// ※ after "0 人"; the note shows on mouse-over, and on a press (phones have no mouse-over)
+const zeroMark = (is: Island) =>
+  is.popZero
+    ? `<button type="button" class="note-mark" aria-expanded="false">※<span class="note-pop" role="tooltip">${esc(is.popNote ?? "令和2年国勢調査では住民0人")}</span></button>`
+    : "";
 const pct = (n: number, total: number) => `${((n / total) * 100).toFixed(1)}%`;
 
 async function main() {
@@ -216,6 +219,42 @@ async function main() {
     if (btn) setLevel(Number(btn.dataset.idx), Number(btn.dataset.v));
     const go = t.closest<HTMLButtonElement>("button[data-goto-row]");
     if (go) showRow(Number(go.dataset.gotoRow));
+  });
+  // keep the note inside the screen, or inside the map when the ※ is in a map popup (the map clips it):
+  // shift it sideways, and put it above the ※ when it would pass the bottom
+  const placeNote = (mark: HTMLElement) => {
+    const pop = mark.querySelector<HTMLElement>(".note-pop");
+    if (!pop) return;
+    pop.style.transform = "";
+    mark.classList.remove("above");
+    const box = mark.closest(".map-wrap")?.getBoundingClientRect() ?? { left: 0, right: innerWidth, bottom: innerHeight };
+    const r = pop.getBoundingClientRect();
+    if (!r.width) return;
+    const margin = 8;
+    const dx = r.left < box.left + margin ? box.left + margin - r.left : r.right > box.right - margin ? box.right - margin - r.right : 0;
+    if (dx) pop.style.transform = `translateX(${dx}px)`;
+    if (r.bottom > box.bottom - margin) mark.classList.add("above");
+  };
+  for (const type of ["mouseover", "focusin"]) {
+    document.addEventListener(type, (e) => {
+      const mark = (e.target as HTMLElement).closest<HTMLElement>(".note-mark");
+      if (mark) requestAnimationFrame(() => placeNote(mark));
+    });
+  }
+  // a press on ※ opens its note (and closes the others); a press anywhere else closes it
+  document.addEventListener("click", (e) => {
+    const mark = (e.target as HTMLElement).closest<HTMLButtonElement>(".note-mark");
+    for (const m of document.querySelectorAll<HTMLButtonElement>(".note-mark.open")) {
+      if (m !== mark) {
+        m.classList.remove("open");
+        m.setAttribute("aria-expanded", "false");
+      }
+    }
+    if (mark) {
+      const open = mark.classList.toggle("open");
+      mark.setAttribute("aria-expanded", String(open));
+      if (open) placeNote(mark);
+    }
   });
 
   // ---------- list ----------
