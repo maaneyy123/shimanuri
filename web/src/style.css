@@ -72,6 +72,11 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .sort-mark { font-size: 0.7rem; color: #a3b0b8; text-decoration: none; }
 .sort-head.active .sort-mark { color: var(--accent); }
 .sort-hint { color: var(--muted); font-size: 0.8rem; }
+/* level filter: the same pale / full-color buttons as the level buttons, several can be pressed */
+.level-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; margin: 0 0 0.75rem; font-size: 0.95rem; }
+.filter-seg { grid-template-columns: repeat(6, minmax(3.2rem, 4.5rem)); }
+.filter-hint { color: var(--muted); font-size: 0.8rem; }
+.list-empty { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.9rem; }
 
 /* level buttons: pale tint until chosen, full color when chosen */
 .seg { display: grid; grid-template-columns: repeat(6, minmax(3.2rem, 1fr)); gap: 4px; }
@@ -89,6 +94,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
   .row { grid-template-columns: 1fr auto auto; grid-template-areas: "name pop area" "muni muni law" "seg seg seg"; }
   .row-head { display: none; }
   .sort-hint { display: none; } /* column headers are hidden on narrow screens; the pull-down remains */
+  .filter-seg { flex: 1 1 100%; grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .cell-name { grid-area: name; }
   .cell-muni { grid-area: muni; }
   .cell-law { grid-area: law; text-align: right; }

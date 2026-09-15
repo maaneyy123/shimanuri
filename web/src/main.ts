@@ -335,16 +335,32 @@ async function main() {
     applyFilter();
   }
 
-  const unvisitedOnly = el<HTMLInputElement>("#filter-unvisited");
+  // level filter: only the pressed levels are listed; with none pressed, every island is listed.
+  // a row whose level is changed stays until the filter is applied again, so a wrong press can be undone
+  const shownLevels = new Set<number>();
+  const levelFilter = el("#level-filter");
+  levelFilter.innerHTML = LEVELS.map(
+    (l) => `<button type="button" data-filter="${l.value}" aria-pressed="false" style="--c:${l.button}">${l.label}</button>`,
+  ).join("");
+  levelFilter.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-filter]");
+    if (!b) return;
+    const v = Number(b.dataset.filter);
+    if (shownLevels.has(v)) shownLevels.delete(v);
+    else shownLevels.add(v);
+    b.setAttribute("aria-pressed", String(shownLevels.has(v)));
+    applyFilter();
+  });
+  const listEmpty = el("#list-empty");
   function applyFilter() {
-    const only = unvisitedOnly.checked;
+    const all = shownLevels.size === 0;
     list.querySelectorAll<HTMLElement>(".row[data-idx]").forEach((row) => {
-      row.hidden = only && levels[Number(row.dataset.idx)] !== 0;
+      row.hidden = !all && !shownLevels.has(levels[Number(row.dataset.idx)]);
     });
     list.querySelectorAll<HTMLElement>(".group").forEach((g) => (g.hidden = !g.querySelector(".row[data-idx]:not([hidden])")));
     list.querySelectorAll<HTMLElement>(".pref").forEach((p) => (p.hidden = !p.querySelector(".row[data-idx]:not([hidden])")));
+    listEmpty.hidden = !!list.querySelector(".row[data-idx]:not([hidden])");
   }
-  unvisitedOnly.addEventListener("change", applyFilter);
 
   list.addEventListener("click", (e) => {
     const t = e.target as HTMLElement;
@@ -372,7 +388,10 @@ async function main() {
   function showRow(idx: number) {
     const row = document.getElementById(`row-${idx}`);
     if (!row) return;
+    // a row hidden by the level filter is shown, with its group and prefecture
     row.hidden = false;
+    for (const box of [row.closest<HTMLElement>(".group"), row.closest<HTMLElement>(".pref")]) if (box) box.hidden = false;
+    listEmpty.hidden = true;
     row.scrollIntoView({ behavior: "smooth", block: "center" });
     row.classList.add("flash");
     setTimeout(() => row.classList.remove("flash"), 1600);

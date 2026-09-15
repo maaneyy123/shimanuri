@@ -58,9 +58,14 @@
             <option value="area-asc">面積の狭い順</option>
           </select>
         </label>
-        <label class="check"><input type="checkbox" id="filter-unvisited" />未踏だけ</label>
         <span class="sort-hint">表の見出し（市町村・対象の法律・人口・面積）を押しても並び替えられます</span>
       </div>
+      <div class="level-filter" role="group" aria-labelledby="level-filter-label">
+        <span id="level-filter-label">表示するレベル</span>
+        <div class="seg filter-seg" id="level-filter"></div>
+        <span class="filter-hint">押したレベルの島だけを表示します（複数選べます。どれも押していないときは全部の島）</span>
+      </div>
+      <p id="list-empty" class="list-empty" hidden>選んだレベルの島はありません</p>
       <div id="list"></div>
 
       <footer id="about" class="about">
