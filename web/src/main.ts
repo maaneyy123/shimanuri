@@ -335,27 +335,23 @@ async function main() {
     applyFilter();
   }
 
-  // level filter: only the pressed levels are listed; with none pressed, every island is listed.
+  // level filter: one checkbox per level, all checked at first; only islands at the checked levels are listed.
   // a row whose level is changed stays until the filter is applied again, so a wrong press can be undone
-  const shownLevels = new Set<number>();
+  const shownLevels = new Set(LEVELS.map((l) => l.value));
   const levelFilter = el("#level-filter");
   levelFilter.innerHTML = LEVELS.map(
-    (l) => `<button type="button" data-filter="${l.value}" aria-pressed="false" style="--c:${l.button}">${l.label}</button>`,
+    (l) => `<label class="check"><input type="checkbox" value="${l.value}" checked />${l.label}</label>`,
   ).join("");
-  levelFilter.addEventListener("click", (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-filter]");
-    if (!b) return;
-    const v = Number(b.dataset.filter);
-    if (shownLevels.has(v)) shownLevels.delete(v);
-    else shownLevels.add(v);
-    b.setAttribute("aria-pressed", String(shownLevels.has(v)));
+  levelFilter.addEventListener("change", (e) => {
+    const box = e.target as HTMLInputElement;
+    if (box.checked) shownLevels.add(Number(box.value));
+    else shownLevels.delete(Number(box.value));
     applyFilter();
   });
   const listEmpty = el("#list-empty");
   function applyFilter() {
-    const all = shownLevels.size === 0;
     list.querySelectorAll<HTMLElement>(".row[data-idx]").forEach((row) => {
-      row.hidden = !all && !shownLevels.has(levels[Number(row.dataset.idx)]);
+      row.hidden = !shownLevels.has(levels[Number(row.dataset.idx)]);
     });
     list.querySelectorAll<HTMLElement>(".group").forEach((g) => (g.hidden = !g.querySelector(".row[data-idx]:not([hidden])")));
     list.querySelectorAll<HTMLElement>(".pref").forEach((p) => (p.hidden = !p.querySelector(".row[data-idx]:not([hidden])")));
