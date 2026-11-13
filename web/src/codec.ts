@@ -9,7 +9,7 @@
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const LEVELS = 6;
-const MARKS = 4;
+const MARKS = 6;
 
 function toB64(n: bigint, minChars = 0): string {
   let s = "";
@@ -133,6 +133,6 @@ function decode(code: string, versions: Record<string, number>, total: number, k
 
 export const encodeLevels = (levels: ArrayLike<number>, version: string) => encode(levels, version, LEVELS);
 export const decodeLevels = (code: string, versions: Record<string, number>, total: number) => decode(code, versions, total, LEVELS);
-// marks: 0 = ○ (the default), 1 = △, 2 = □, 3 = ✕
+// marks: 0 = ○ (the default), 1 = △, 2 = □, 3 = ◇, 4 = ☆, 5 = ✕
 export const encodeMarks = (marks: ArrayLike<number>, version: string) => encode(marks, version, MARKS);
 export const decodeMarks = (code: string, versions: Record<string, number>, total: number) => decode(code, versions, total, MARKS);

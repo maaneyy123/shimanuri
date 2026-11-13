@@ -48,8 +48,8 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .pref h4 { margin: 0.6rem 0 0.1rem; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
 .count { color: var(--muted); font-weight: normal; font-size: 0.9rem; margin-left: 0.3rem; }
 
-/* one island per row: name | municipality | law | population | area | level buttons */
-.row { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem 10.5rem; align-items: center; gap: 0.25rem 0.75rem; padding: 0.35rem 0 0.35rem 0.5rem; border-left: 6px solid var(--row-color, #fff); border-top: 1px solid #eef2f4; }
+/* one island per row: name | municipality | law | population | area | level buttons | mark */
+.row { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem 4.25rem; align-items: center; gap: 0.25rem 0.75rem; padding: 0.35rem 0 0.35rem 0.5rem; border-left: 6px solid var(--row-color, #fff); border-top: 1px solid #eef2f4; }
 .row-head { border-left-color: transparent; border-top: 0; font-size: 0.8rem; color: var(--muted); padding-top: 0; padding-bottom: 0.1rem; }
 .row[hidden] { display: none; } /* display: grid above would otherwise keep rows hidden by the level filter on screen */
 .row.flash { background: #fff6cc; transition: background 0.3s; }
@@ -72,10 +72,9 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .sort-head.active { color: var(--ink); font-weight: 700; }
 .sort-mark { font-size: 0.7rem; color: #a3b0b8; text-decoration: none; }
 .sort-head.active .sort-mark { color: var(--accent); }
-/* level and mark filters: one checkbox per level / mark; the second label starts with かつ (both must match) */
+/* level and mark filters: one checkbox per level / mark; the labels start at the same left edge */
 .filters { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.4rem 1rem; margin: 0 0 0.75rem; font-size: 0.95rem; }
-.filter-label { text-align: right; white-space: nowrap; }
-.filter-and { color: var(--accent); font-weight: 700; margin-right: 0.4rem; }
+.filter-label { white-space: nowrap; }
 .filter-checks { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; }
 .list-empty { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.9rem; }
 
@@ -84,25 +83,23 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .seg button { border: 1px solid color-mix(in srgb, var(--c) 55%, white); background: color-mix(in srgb, var(--c) 22%, white); color: var(--ink); border-radius: 6px; padding: 0.45rem 0.3rem; min-height: 44px; font-size: 1rem; cursor: pointer; }
 .seg button:hover { background: color-mix(in srgb, var(--c) 45%, white); }
 .seg button[aria-pressed="true"] { background: var(--c); border-color: color-mix(in srgb, var(--c) 70%, black); font-weight: 700; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
-/* mark buttons: same height as the level buttons, pale grey until chosen, dark when chosen */
-.marks-head { text-align: center; }
-.marks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.marks button { border: 1px solid #c9d3d9; background: #f1f4f6; color: var(--ink); border-radius: 6px; padding: 0.45rem 0.2rem; min-height: 44px; font-size: 1rem; line-height: 1; cursor: pointer; }
-.marks button:hover { background: #dde4e8; }
-.marks button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+/* mark pull-down */
+.mark-head { text-align: center; }
+.mark-select { width: 100%; min-height: 44px; padding: 0 0.2rem; border: 1px solid #c9d3d9; border-radius: 6px; background: #fff; color: var(--ink); font-size: 1rem; cursor: pointer; }
 
-/* windows too narrow for the mark column (the row needs about 1,130px): the marks go under the level buttons */
-@media (min-width: 761px) and (max-width: 1159px) {
-  .row { grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem; grid-template-areas: "name muni law pop area seg" "name muni law pop area marks"; }
+/* windows too narrow for the mark column (the row needs about 1,050px): the pull-down goes under the island name */
+@media (min-width: 761px) and (max-width: 1049px) {
+  .row { grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem; grid-template-areas: "name muni law pop area seg" "mark muni law pop area seg"; }
   .row-head { grid-template-areas: "name muni law pop area seg"; }
-  .row-head .marks-head { display: none; }
+  .row-head .mark-head { display: none; }
   .cell-name { grid-area: name; }
   .cell-muni { grid-area: muni; }
   .cell-law { grid-area: law; }
   .row > .cell-num:nth-of-type(4) { grid-area: pop; }
   .row > .cell-num:nth-of-type(5) { grid-area: area; }
   .row .seg, .row-head .seg-head { grid-area: seg; }
-  .row .marks { grid-area: marks; }
+  .row .cell-mark { grid-area: mark; }
+  .mark-select { width: 3.5rem; min-height: 32px; }
 }
 
 @media (max-width: 760px) {
@@ -112,8 +109,10 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
   .map-wrap { height: 40dvh; margin: 0 0.5rem; }
   .legend { top: 8px; bottom: auto; }
   .pane { padding: 0 0.5rem 1.5rem; }
-  .row { grid-template-columns: 1fr auto auto; grid-template-areas: "name pop area" "muni muni law" "seg seg seg" "marks marks marks"; }
-  .row .marks { grid-area: marks; }
+  /* the mark pull-down sits at the end of the second line, so the row keeps three lines */
+  .row { grid-template-columns: 1fr auto auto auto; grid-template-areas: "name name pop area" "muni muni law mark" "seg seg seg seg"; }
+  .row .cell-mark { grid-area: mark; }
+  .mark-select { min-height: 32px; width: 3.5rem; }
   .row-head { display: none; }
   .cell-name { grid-area: name; }
   .cell-muni { grid-area: muni; }

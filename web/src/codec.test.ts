@@ -63,14 +63,14 @@ describe("mark codec", () => {
   };
 
   it("round-trips 300 uniformly random states within the dense length", () => {
-    // 432 marks of 4 kinds = 864 bits = 144 base64url chars, plus the version char
-    for (let t = 0; t < 300; t++) expect(roundTripMarks(Uint8Array.from({ length: 432 }, () => Math.floor(Math.random() * 4))).length).toBeLessThanOrEqual(145);
+    // 432 marks of 6 kinds: the dense scheme needs 432 x log2(6) = 1,116.7 bits = 187 base64url chars, plus the version char
+    for (let t = 0; t < 300; t++) expect(roundTripMarks(Uint8Array.from({ length: 432 }, () => Math.floor(Math.random() * 6))).length).toBeLessThanOrEqual(188);
   });
 
   it("keeps a few non-default marks short", () => {
     for (let t = 0; t < 300; t++) {
       const marks = new Uint8Array(432);
-      for (let j = 0; j < 20; j++) marks[Math.floor(Math.random() * 432)] = 1 + Math.floor(Math.random() * 3);
+      for (let j = 0; j < 20; j++) marks[Math.floor(Math.random() * 432)] = 1 + Math.floor(Math.random() * 5);
       expect(roundTripMarks(marks).length).toBeLessThanOrEqual(40);
     }
   });

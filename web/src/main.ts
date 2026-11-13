@@ -207,11 +207,11 @@ async function main() {
     ).join("");
   }
 
-  function markButtons(idx: number) {
-    return MARKS.map(
-      (m) => `<button type="button" data-idx="${idx}" data-m="${m.value}" aria-pressed="${marks[idx] === m.value}" title="記号: ${m.name}" aria-label="${m.name}">${m.symbol}</button>`,
-    ).join("");
-  }
+  // mark pull-down: a single control, so it takes little room on phones
+  const markSelect = (idx: number) =>
+    `<select class="mark-select" data-mark-idx="${idx}" aria-label="記号">${MARKS.map(
+      (m) => `<option value="${m.value}"${marks[idx] === m.value ? " selected" : ""}>${m.symbol}</option>`,
+    ).join("")}</select>`;
 
   // ---------- popup ----------
   let popup: maplibregl.Popup | null = null;
@@ -310,7 +310,7 @@ async function main() {
       <div class="cell-num">${fmtPop(is.pop)}${is.pop == null ? "" : '<span class="unit">人</span>'}${zeroMark(is)}</div>
       <div class="cell-num">${fmtArea(is.area)}${is.area == null ? "" : '<span class="unit">km²</span>'}</div>
       <div class="seg">${levelButtons(idx)}</div>
-      <div class="marks">${markButtons(idx)}</div>
+      <div class="cell-mark">${markSelect(idx)}</div>
     </div>`;
   };
   const list = el("#list");
@@ -325,7 +325,7 @@ async function main() {
   };
   const headerHtml = () => `<div class="row row-head">
       <div class="cell-name">島名</div><div class="cell-muni">${sortHead("pref", "市町村")}</div><div class="cell-law">${sortHead("law", "対象の法律")}</div>
-      <div class="cell-num">${sortHead("pop", "人口")}</div><div class="cell-num">${sortHead("area", "面積")}</div><div class="seg-head">レベル</div><div class="marks-head">記号</div>
+      <div class="cell-num">${sortHead("pop", "人口")}</div><div class="cell-num">${sortHead("area", "面積")}</div><div class="seg-head">レベル</div><div class="cell-mark mark-head">記号</div>
     </div>`;
   const lawRank = (idx: number) => {
     const r = LAW_ORDER.indexOf(islands[idx].category);
@@ -402,8 +402,6 @@ async function main() {
     }
     const btn = t.closest<HTMLButtonElement>("button[data-v]");
     if (btn) setLevel(Number(btn.dataset.idx), Number(btn.dataset.v));
-    const markBtn = t.closest<HTMLButtonElement>("button[data-m]");
-    if (markBtn) setMark(Number(markBtn.dataset.idx), Number(markBtn.dataset.m));
     const fly = t.closest<HTMLButtonElement>("button[data-fly]");
     if (fly) {
       const idx = Number(fly.dataset.fly);
@@ -414,6 +412,11 @@ async function main() {
       map.flyTo({ center: [is.lon, is.lat], zoom: Math.max(map.getZoom(), 10), offset: [0, -map.getContainer().clientHeight * 0.25] });
       openPopup(idx, [is.lon, is.lat]);
     }
+  });
+
+  list.addEventListener("change", (e) => {
+    const sel = (e.target as HTMLElement).closest<HTMLSelectElement>("select[data-mark-idx]");
+    if (sel) setMark(Number(sel.dataset.markIdx), Number(sel.value));
   });
 
   function showRow(idx: number) {
@@ -432,9 +435,8 @@ async function main() {
     document.querySelectorAll<HTMLButtonElement>(`button[data-idx="${idx}"][data-v]`).forEach((b) => {
       b.setAttribute("aria-pressed", String(Number(b.dataset.v) === levels[idx]));
     });
-    document.querySelectorAll<HTMLButtonElement>(`button[data-idx="${idx}"][data-m]`).forEach((b) => {
-      b.setAttribute("aria-pressed", String(Number(b.dataset.m) === marks[idx]));
-    });
+    const sel = document.querySelector<HTMLSelectElement>(`select[data-mark-idx="${idx}"]`);
+    if (sel) sel.value = String(marks[idx]);
     document.getElementById(`row-${idx}`)?.style.setProperty("--row-color", colorOf(levels[idx]));
   }
 
@@ -586,7 +588,7 @@ function readState(data: IslandData): { levels: Uint8Array; marks: Uint8Array } 
 
 // icon size in CSS pixels at icon-size 1; drawn at twice the size for sharp edges on high-density screens
 const MARK_ICON = 16;
-// one image per mark (△ □ ✕) and level, filled with the level's colour and outlined like the circles
+// one image per mark (△ □ ◇ ☆ ✕) and level, filled with the level's colour and outlined like the circles
 function addMarkImages(map: maplibregl.Map) {
   const ratio = 2;
   const px = MARK_ICON * ratio;
@@ -599,16 +601,29 @@ function addMarkImages(map: maplibregl.Map) {
       ctx.scale(ratio, ratio);
       ctx.beginPath();
       const h = MARK_ICON / 2 - 1; // half the drawing box, leaving room for the outline
-      if (mark.value === 1) {
-        // △: equilateral, its centre of gravity a little below the middle so it sits inside the box
+      if (mark.symbol === "△") {
+        // equilateral, its centre of gravity a little below the middle so it sits inside the box
         const r = h * 1.15;
         for (let k = 0; k < 3; k++) {
           const a = -Math.PI / 2 + (k * 2 * Math.PI) / 3;
           ctx.lineTo(r * Math.cos(a), r * Math.sin(a) + r * 0.12);
         }
-      } else if (mark.value === 2) {
-        const s = h * 0.82; // □
+      } else if (mark.symbol === "□") {
+        const s = h * 0.82;
         ctx.rect(-s, -s, 2 * s, 2 * s);
+      } else if (mark.symbol === "◇") {
+        const s = h * 1.12;
+        ctx.moveTo(0, -s);
+        ctx.lineTo(s, 0);
+        ctx.lineTo(0, s);
+        ctx.lineTo(-s, 0);
+      } else if (mark.symbol === "☆") {
+        // five points, outer radius 1.1h and inner radius 0.48h, nudged down to sit in the middle
+        for (let k = 0; k < 10; k++) {
+          const r = k % 2 ? h * 0.48 : h * 1.1;
+          const a = -Math.PI / 2 + (k * Math.PI) / 5;
+          ctx.lineTo(r * Math.cos(a), r * Math.sin(a) + h * 0.08);
+        }
       } else {
         // ✕: a plus sign of arm half-width a, turned 45 degrees
         const a = h * 0.3;

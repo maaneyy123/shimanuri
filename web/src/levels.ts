@@ -40,5 +40,7 @@ export const MARKS: Mark[] = [
   { value: 0, symbol: "○", name: "丸" },
   { value: 1, symbol: "△", name: "三角" },
   { value: 2, symbol: "□", name: "四角" },
-  { value: 3, symbol: "✕", name: "バツ" },
+  { value: 3, symbol: "◇", name: "ひし形" },
+  { value: 4, symbol: "☆", name: "星" },
+  { value: 5, symbol: "✕", name: "バツ" },
 ];
