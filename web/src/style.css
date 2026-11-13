@@ -49,7 +49,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .count { color: var(--muted); font-weight: normal; font-size: 0.9rem; margin-left: 0.3rem; }
 
 /* one island per row: name | municipality | law | population | area | level buttons | mark */
-.row { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem 4.25rem; align-items: center; gap: 0.25rem 0.75rem; padding: 0.35rem 0 0.35rem 0.5rem; border-left: 6px solid var(--row-color, #fff); border-top: 1px solid #eef2f4; }
+.row { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem auto; align-items: center; gap: 0.25rem 0.75rem; padding: 0.35rem 0 0.35rem 0.5rem; border-left: 6px solid var(--row-color, #fff); border-top: 1px solid #eef2f4; }
 .row-head { border-left-color: transparent; border-top: 0; font-size: 0.8rem; color: var(--muted); padding-top: 0; padding-bottom: 0.1rem; }
 .row[hidden] { display: none; } /* display: grid above would otherwise keep rows hidden by the level filter on screen */
 .row.flash { background: #fff6cc; transition: background 0.3s; }
@@ -72,10 +72,13 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .sort-head.active { color: var(--ink); font-weight: 700; }
 .sort-mark { font-size: 0.7rem; color: #a3b0b8; text-decoration: none; }
 .sort-head.active .sort-mark { color: var(--accent); }
-/* level and mark filters: one checkbox per level / mark; the labels start at the same left edge */
-.filters { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.4rem 1rem; margin: 0 0 0.75rem; font-size: 0.95rem; }
-.filter-label { white-space: nowrap; }
-.filter-checks { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; }
+/* level and mark filters: one checkbox per level / mark; the labels start at the same left edge.
+   (AND条件) sits left of a bracket that joins the two rows, so the AND reads as between the rows, not between the checkboxes */
+.filters { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 0.4rem 1rem; margin: 0 0 0.75rem; font-size: 0.95rem; }
+.filter-and { grid-column: 1; grid-row: 1 / span 2; align-self: stretch; display: flex; align-items: center; position: relative; padding-right: 0.7rem; margin-right: -0.4rem; color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+.filter-and::after { content: ""; position: absolute; right: 0; top: 0.35rem; bottom: 0.35rem; width: 0.4rem; border: 2px solid #a3b0b8; border-right: 0; border-radius: 4px 0 0 4px; }
+.filter-label { grid-column: 2; white-space: nowrap; }
+.filter-checks { grid-column: 3; display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; }
 .list-empty { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.9rem; }
 
 /* level buttons: pale tint until chosen, full color when chosen */
@@ -85,10 +88,10 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
 .seg button[aria-pressed="true"] { background: var(--c); border-color: color-mix(in srgb, var(--c) 70%, black); font-weight: 700; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
 /* mark pull-down */
 .mark-head { text-align: center; }
-.mark-select { width: 100%; min-height: 44px; padding: 0 0.2rem; border: 1px solid #c9d3d9; border-radius: 6px; background: #fff; color: var(--ink); font-size: 1rem; cursor: pointer; }
+.mark-select { width: auto; min-height: 44px; padding: 0 0.1rem; border: 1px solid #c9d3d9; border-radius: 6px; background: #fff; color: var(--ink); font-size: 1rem; cursor: pointer; }
 
-/* windows too narrow for the mark column (the row needs about 1,050px): the pull-down goes under the island name */
-@media (min-width: 761px) and (max-width: 1049px) {
+/* windows too narrow for the mark column (the list needs about 1,005px): the pull-down goes under the island name */
+@media (min-width: 761px) and (max-width: 1019px) {
   .row { grid-template-columns: minmax(7rem, 9rem) minmax(6rem, 1fr) 7.5rem 5.5rem 5.5rem 21.5rem; grid-template-areas: "name muni law pop area seg" "mark muni law pop area seg"; }
   .row-head { grid-template-areas: "name muni law pop area seg"; }
   .row-head .mark-head { display: none; }
@@ -99,7 +102,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
   .row > .cell-num:nth-of-type(5) { grid-area: area; }
   .row .seg, .row-head .seg-head { grid-area: seg; }
   .row .cell-mark { grid-area: mark; }
-  .mark-select { width: 3.5rem; min-height: 32px; }
+  .mark-select { min-height: 32px; }
 }
 
 @media (max-width: 760px) {
@@ -112,7 +115,7 @@ body { margin: 0; height: 100dvh; display: flex; flex-direction: column; overflo
   /* the mark pull-down sits at the end of the second line, so the row keeps three lines */
   .row { grid-template-columns: 1fr auto auto auto; grid-template-areas: "name name pop area" "muni muni law mark" "seg seg seg seg"; }
   .row .cell-mark { grid-area: mark; }
-  .mark-select { min-height: 32px; width: 3.5rem; }
+  .mark-select { min-height: 32px; }
   .row-head { display: none; }
   .cell-name { grid-area: name; }
   .cell-muni { grid-area: muni; }
