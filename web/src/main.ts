@@ -2,8 +2,8 @@ import type { FeatureCollection } from "geojson";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
-import { decodeLevels, encodeLevels } from "./codec";
-import { LAW_LABEL, LAW_ORDER, LEVELS, colorOf, levelColorExpression } from "./levels";
+import { decodeLevels, decodeMarks, encodeLevels, encodeMarks } from "./codec";
+import { LAW_LABEL, LAW_ORDER, LEVELS, MARKS, colorOf, levelColorExpression } from "./levels";
 
 type Island = {
   id: string;
@@ -30,6 +30,7 @@ const SORT_FIRST_DIR: Record<SortField, SortDir> = { pref: "asc", law: "asc", po
 
 const BASE = import.meta.env.BASE_URL;
 const STORAGE_KEY = "shimanuri:levels";
+const MARK_STORAGE_KEY = "shimanuri:marks";
 const MAX_LEVEL = 5;
 // GSI blank tiles exist for tile zoom 5-14 only. MapLibre loads 256px tiles one zoom above the map zoom,
 // so map zoom 4 still shows tile zoom 5; the map never zooms out further so no other base map is shown
@@ -49,7 +50,7 @@ const pct = (n: number, total: number) => `${((n / total) * 100).toFixed(1)}%`;
 async function main() {
   const data: IslandData = await fetch(`${BASE}data/islands.json`).then((r) => r.json());
   const islands = data.islands;
-  let levels = readLevels(data) ?? new Uint8Array(islands.length);
+  let { levels, marks } = readState(data);
 
   // ---------- map ----------
   const map = new maplibregl.Map({
@@ -77,7 +78,8 @@ async function main() {
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
-  const pointData: FeatureCollection = {
+  // level and mark are properties as well as feature state: the mark icon is chosen in the layout, which cannot read feature state
+  const pointData = (): FeatureCollection => ({
     type: "FeatureCollection",
     features: islands.flatMap((is, idx) =>
       is.lon == null || is.lat == null
@@ -86,11 +88,12 @@ async function main() {
             {
               type: "Feature" as const,
               geometry: { type: "Point" as const, coordinates: [is.lon, is.lat] },
-              properties: { idx, name: is.name, shape: is.shape },
+              properties: { idx, name: is.name, shape: is.shape, level: levels[idx], mark: marks[idx] },
             },
           ],
     ),
-  };
+  });
+  const refreshPoints = () => (map.getSource("points") as maplibregl.GeoJSONSource | undefined)?.setData(pointData());
 
   map.on("load", () => {
     const gsi = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>';
@@ -132,13 +135,15 @@ async function main() {
       paint: { "line-color": "#4d5d69", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.3, 12, 1.2] },
     });
 
-    map.addSource("points", { type: "geojson", data: pointData, promoteId: "idx" });
+    map.addSource("points", { type: "geojson", data: pointData(), promoteId: "idx" });
+    addMarkImages(map);
     const fadeWithShape = ["interpolate", ["linear"], ["zoom"], 9, 1, 11, ["case", ["get", "shape"], 0, 1]] as unknown as maplibregl.ExpressionSpecification;
     const painted = [">", ["coalesce", ["feature-state", "level"], 0], 0] as unknown as maplibregl.ExpressionSpecification;
     map.addLayer({
       id: "points-circle",
       type: "circle",
       source: "points",
+      filter: ["==", ["get", "mark"], 0],
       paint: {
         "circle-color": levelColorExpression,
         // painted islands are drawn larger so they stand out on the whole-Japan view
@@ -148,6 +153,22 @@ async function main() {
         "circle-opacity": fadeWithShape,
         "circle-stroke-opacity": fadeWithShape,
       },
+    });
+    // △ □ ✕: icons drawn at the same sizes as the circles, in the level's colour
+    const paintedProp = [">", ["get", "level"], 0] as unknown as maplibregl.ExpressionSpecification;
+    const iconSize = (painted: number, unpainted: number) => ["case", paintedProp, painted / MARK_ICON, unpainted / MARK_ICON];
+    map.addLayer({
+      id: "points-mark",
+      type: "symbol",
+      source: "points",
+      filter: [">", ["get", "mark"], 0],
+      layout: {
+        "icon-image": ["concat", "mark-", ["to-string", ["get", "mark"]], "-", ["to-string", ["get", "level"]]],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 5, iconSize(10, 5), 8, iconSize(14, 9), 12, iconSize(16, 12)] as unknown as maplibregl.ExpressionSpecification,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      },
+      paint: { "icon-opacity": fadeWithShape },
     });
     map.addLayer({
       id: "island-labels",
@@ -175,6 +196,7 @@ async function main() {
   }
   function applyAllStates() {
     islands.forEach((_, idx) => applyState(idx));
+    refreshPoints();
   }
 
   // ---------- level buttons ----------
@@ -182,6 +204,12 @@ async function main() {
     return LEVELS.map(
       (l) =>
         `<button type="button" data-idx="${idx}" data-v="${l.value}" aria-pressed="${levels[idx] === l.value}" title="${l.label}: ${esc(l.guide)}" style="--c:${l.button}">${l.label}</button>`,
+    ).join("");
+  }
+
+  function markButtons(idx: number) {
+    return MARKS.map(
+      (m) => `<button type="button" data-idx="${idx}" data-m="${m.value}" aria-pressed="${marks[idx] === m.value}" title="記号: ${m.name}" aria-label="${m.name}">${m.symbol}</button>`,
     ).join("");
   }
 
@@ -205,7 +233,7 @@ async function main() {
     popup = new maplibregl.Popup({ closeButton: true, maxWidth: "340px", focusAfterOpen: false }).setLngLat(lngLat).setHTML(popupHtml(idx)).addTo(map);
     popup.on("close", () => (popupIdx = -1));
   }
-  for (const layer of ["islands-fill", "points-circle"]) {
+  for (const layer of ["islands-fill", "points-circle", "points-mark"]) {
     map.on("click", layer, (e) => {
       const f = e.features?.[0];
       if (f) openPopup(Number(f.properties.idx), e.lngLat);
@@ -282,6 +310,7 @@ async function main() {
       <div class="cell-num">${fmtPop(is.pop)}${is.pop == null ? "" : '<span class="unit">人</span>'}${zeroMark(is)}</div>
       <div class="cell-num">${fmtArea(is.area)}${is.area == null ? "" : '<span class="unit">km²</span>'}</div>
       <div class="seg">${levelButtons(idx)}</div>
+      <div class="marks">${markButtons(idx)}</div>
     </div>`;
   };
   const list = el("#list");
@@ -296,7 +325,7 @@ async function main() {
   };
   const headerHtml = () => `<div class="row row-head">
       <div class="cell-name">島名</div><div class="cell-muni">${sortHead("pref", "市町村")}</div><div class="cell-law">${sortHead("law", "対象の法律")}</div>
-      <div class="cell-num">${sortHead("pop", "人口")}</div><div class="cell-num">${sortHead("area", "面積")}</div><div class="seg-head">レベル</div>
+      <div class="cell-num">${sortHead("pop", "人口")}</div><div class="cell-num">${sortHead("area", "面積")}</div><div class="seg-head">レベル</div><div class="marks-head">記号</div>
     </div>`;
   const lawRank = (idx: number) => {
     const r = LAW_ORDER.indexOf(islands[idx].category);
@@ -335,23 +364,27 @@ async function main() {
     applyFilter();
   }
 
-  // level filter: one checkbox per level, all checked at first; only islands at the checked levels are listed.
-  // a row whose level is changed stays until the filter is applied again, so a wrong press can be undone
-  const shownLevels = new Set(LEVELS.map((l) => l.value));
-  const levelFilter = el("#level-filter");
-  levelFilter.innerHTML = LEVELS.map(
-    (l) => `<label class="check"><input type="checkbox" value="${l.value}" checked />${l.label}</label>`,
-  ).join("");
-  levelFilter.addEventListener("change", (e) => {
-    const box = e.target as HTMLInputElement;
-    if (box.checked) shownLevels.add(Number(box.value));
-    else shownLevels.delete(Number(box.value));
-    applyFilter();
-  });
+  // level and mark filters: one checkbox per level / mark, all checked at first; only islands whose level AND mark are checked are listed.
+  // a row whose level or mark is changed stays until a filter is applied again, so a wrong press can be undone
+  const filterChecks = (sel: string, items: { value: number; label: string }[]) => {
+    const shown = new Set(items.map((i) => i.value));
+    const box = el(sel);
+    box.innerHTML = items.map((i) => `<label class="check"><input type="checkbox" value="${i.value}" checked />${i.label}</label>`).join("");
+    box.addEventListener("change", (e) => {
+      const input = e.target as HTMLInputElement;
+      if (input.checked) shown.add(Number(input.value));
+      else shown.delete(Number(input.value));
+      applyFilter();
+    });
+    return shown;
+  };
+  const shownLevels = filterChecks("#level-filter", LEVELS);
+  const shownMarks = filterChecks("#mark-filter", MARKS.map((m) => ({ value: m.value, label: m.symbol })));
   const listEmpty = el("#list-empty");
   function applyFilter() {
     list.querySelectorAll<HTMLElement>(".row[data-idx]").forEach((row) => {
-      row.hidden = !shownLevels.has(levels[Number(row.dataset.idx)]);
+      const idx = Number(row.dataset.idx);
+      row.hidden = !shownLevels.has(levels[idx]) || !shownMarks.has(marks[idx]);
     });
     list.querySelectorAll<HTMLElement>(".group").forEach((g) => (g.hidden = !g.querySelector(".row[data-idx]:not([hidden])")));
     list.querySelectorAll<HTMLElement>(".pref").forEach((p) => (p.hidden = !p.querySelector(".row[data-idx]:not([hidden])")));
@@ -369,6 +402,8 @@ async function main() {
     }
     const btn = t.closest<HTMLButtonElement>("button[data-v]");
     if (btn) setLevel(Number(btn.dataset.idx), Number(btn.dataset.v));
+    const markBtn = t.closest<HTMLButtonElement>("button[data-m]");
+    if (markBtn) setMark(Number(markBtn.dataset.idx), Number(markBtn.dataset.m));
     const fly = t.closest<HTMLButtonElement>("button[data-fly]");
     if (fly) {
       const idx = Number(fly.dataset.fly);
@@ -384,7 +419,7 @@ async function main() {
   function showRow(idx: number) {
     const row = document.getElementById(`row-${idx}`);
     if (!row) return;
-    // a row hidden by the level filter is shown, with its group and prefecture
+    // a row hidden by the filters is shown, with its group and prefecture
     row.hidden = false;
     for (const box of [row.closest<HTMLElement>(".group"), row.closest<HTMLElement>(".pref")]) if (box) box.hidden = false;
     listEmpty.hidden = true;
@@ -396,6 +431,9 @@ async function main() {
   function refreshRow(idx: number) {
     document.querySelectorAll<HTMLButtonElement>(`button[data-idx="${idx}"][data-v]`).forEach((b) => {
       b.setAttribute("aria-pressed", String(Number(b.dataset.v) === levels[idx]));
+    });
+    document.querySelectorAll<HTMLButtonElement>(`button[data-idx="${idx}"][data-m]`).forEach((b) => {
+      b.setAttribute("aria-pressed", String(Number(b.dataset.m) === marks[idx]));
     });
     document.getElementById(`row-${idx}`)?.style.setProperty("--row-color", colorOf(levels[idx]));
   }
@@ -430,22 +468,36 @@ async function main() {
   function setLevel(idx: number, v: number) {
     levels[idx] = v;
     applyState(idx);
+    refreshPoints();
     refreshRow(idx);
     renderSummary();
     writeUrl();
-    // only the viewer's own button presses are saved, so opening someone else's link never overwrites it
+    save();
+    if (popupIdx === idx && popup) popup.setHTML(popupHtml(idx));
+  }
+  function setMark(idx: number, m: number) {
+    marks[idx] = m;
+    refreshPoints();
+    refreshRow(idx);
+    writeUrl();
+    save();
+  }
+  // only the viewer's own button presses are saved, so opening someone else's link never overwrites it
+  function save() {
     try {
       localStorage.setItem(STORAGE_KEY, encodeLevels(levels, data.version));
+      localStorage.setItem(MARK_STORAGE_KEY, encodeMarks(marks, data.version));
     } catch {
       /* storage unavailable: the URL still holds the state */
     }
-    if (popupIdx === idx && popup) popup.setHTML(popupHtml(idx));
   }
+  // "#<levels>" while every island has ○, "#<levels>#<marks>" once any island has another mark
   function writeUrl() {
-    history.replaceState(null, "", `#${encodeLevels(levels, data.version)}`);
+    const markPart = marks.some((m) => m > 0) ? `#${encodeMarks(marks, data.version)}` : "";
+    history.replaceState(null, "", `#${encodeLevels(levels, data.version)}${markPart}`);
   }
   window.addEventListener("hashchange", () => {
-    levels = readLevels(data) ?? new Uint8Array(islands.length);
+    ({ levels, marks } = readState(data));
     writeUrl();
     islands.forEach((_, idx) => refreshRow(idx));
     applyAllStates();
@@ -501,23 +553,78 @@ async function main() {
   writeUrl();
 }
 
-// A link with a record uses only that record (an unreadable one gives an empty map);
-// the saved record is used only when the page is opened without one.
-function readLevels(data: IslandData): Uint8Array | null {
-  const decode = (code: string) => decodeLevels(code, data.versions, data.islands.length);
+// A link with a record uses only that record; the saved record is used only when the page is opened without one.
+// Unreadable levels give an empty map with every mark ○; unreadable marks give every mark ○ and keep the levels.
+function readState(data: IslandData): { levels: Uint8Array; marks: Uint8Array } {
+  const total = data.islands.length;
+  const empty = () => ({ levels: new Uint8Array(total), marks: new Uint8Array(total) });
+  let levelCode: string | null;
+  let markCode: string | null;
   const hash = location.hash.slice(1);
   if (hash) {
     try {
-      return decode(decodeURIComponent(hash));
+      const text = decodeURIComponent(hash);
+      const cut = text.indexOf("#");
+      levelCode = cut < 0 ? text : text.slice(0, cut);
+      markCode = cut < 0 ? null : text.slice(cut + 1);
     } catch {
-      return null; // malformed %-escape
+      return empty(); // malformed %-escape
+    }
+  } else {
+    try {
+      levelCode = localStorage.getItem(STORAGE_KEY);
+      markCode = localStorage.getItem(MARK_STORAGE_KEY);
+    } catch {
+      return empty(); // storage unavailable
     }
   }
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? decode(saved) : null;
-  } catch {
-    return null;
+  const levels = levelCode ? decodeLevels(levelCode, data.versions, total) : null;
+  if (!levels) return empty();
+  const marks = (markCode ? decodeMarks(markCode, data.versions, total) : null) ?? new Uint8Array(total);
+  return { levels, marks };
+}
+
+// icon size in CSS pixels at icon-size 1; drawn at twice the size for sharp edges on high-density screens
+const MARK_ICON = 16;
+// one image per mark (△ □ ✕) and level, filled with the level's colour and outlined like the circles
+function addMarkImages(map: maplibregl.Map) {
+  const ratio = 2;
+  const px = MARK_ICON * ratio;
+  for (const mark of MARKS.filter((m) => m.value > 0)) {
+    for (const level of LEVELS) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = px;
+      const ctx = canvas.getContext("2d")!;
+      ctx.translate(px / 2, px / 2);
+      ctx.scale(ratio, ratio);
+      ctx.beginPath();
+      const h = MARK_ICON / 2 - 1; // half the drawing box, leaving room for the outline
+      if (mark.value === 1) {
+        // △: equilateral, its centre of gravity a little below the middle so it sits inside the box
+        const r = h * 1.15;
+        for (let k = 0; k < 3; k++) {
+          const a = -Math.PI / 2 + (k * 2 * Math.PI) / 3;
+          ctx.lineTo(r * Math.cos(a), r * Math.sin(a) + r * 0.12);
+        }
+      } else if (mark.value === 2) {
+        const s = h * 0.82; // □
+        ctx.rect(-s, -s, 2 * s, 2 * s);
+      } else {
+        // ✕: a plus sign of arm half-width a, turned 45 degrees
+        const a = h * 0.3;
+        const l = h * 1.05;
+        const plus = [[a, l], [a, a], [l, a], [l, -a], [a, -a], [a, -l], [-a, -l], [-a, -a], [-l, -a], [-l, a], [-a, a], [-a, l]];
+        for (const [x, y] of plus) ctx.lineTo((x - y) * Math.SQRT1_2, (x + y) * Math.SQRT1_2);
+      }
+      ctx.closePath();
+      ctx.fillStyle = level.color;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#4d5d69";
+      ctx.stroke();
+      map.addImage(`mark-${mark.value}-${level.value}`, ctx.getImageData(0, 0, px, px), { pixelRatio: ratio });
+    }
   }
 }
 

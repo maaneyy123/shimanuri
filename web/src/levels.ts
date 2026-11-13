@@ -33,3 +33,12 @@ export const LAW_LABEL: Record<string, string> = {
 };
 // order used when sorting by law (the order of the MLIT table 日本の島嶼の構成), not the character order
 export const LAW_ORDER = ["離島振興法", "沖縄振興特別措置法", "奄美群島振興開発特別措置法", "小笠原諸島振興開発特別措置法", "法対象外"];
+
+// Mark drawn for an island on the map and chosen in the list. 0 (○) is the default and is left out of the link.
+export type Mark = { value: number; symbol: string; name: string };
+export const MARKS: Mark[] = [
+  { value: 0, symbol: "○", name: "丸" },
+  { value: 1, symbol: "△", name: "三角" },
+  { value: 2, symbol: "□", name: "四角" },
+  { value: 3, symbol: "✕", name: "バツ" },
+];

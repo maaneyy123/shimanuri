@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeLevels, encodeDenseCode, encodeLevels, encodeModeledCode } from "./codec";
+import { decodeLevels, decodeMarks, encodeDenseCode, encodeLevels, encodeMarks, encodeModeledCode } from "./codec";
 
 const V = { A: 432 };
 // A link in the format of the first (dense-only) encoder, made from seeded random levels (142 islands painted).
@@ -52,5 +52,37 @@ describe("level codec", () => {
     expect(decodeLevels("Z123", V, 432)).toBeNull();
     expect(decodeLevels("A!!", V, 432)).toBeNull();
     expect(decodeLevels("A" + "_".repeat(200), V, 432)).toBeNull();
+  });
+});
+
+describe("mark codec", () => {
+  const roundTripMarks = (marks: Uint8Array) => {
+    const code = encodeMarks(marks, "A");
+    expect(Array.from(decodeMarks(code, V, 432)!)).toEqual(Array.from(marks));
+    return code;
+  };
+
+  it("round-trips 300 uniformly random states within the dense length", () => {
+    // 432 marks of 4 kinds = 864 bits = 144 base64url chars, plus the version char
+    for (let t = 0; t < 300; t++) expect(roundTripMarks(Uint8Array.from({ length: 432 }, () => Math.floor(Math.random() * 4))).length).toBeLessThanOrEqual(145);
+  });
+
+  it("keeps a few non-default marks short", () => {
+    for (let t = 0; t < 300; t++) {
+      const marks = new Uint8Array(432);
+      for (let j = 0; j < 20; j++) marks[Math.floor(Math.random() * 432)] = 1 + Math.floor(Math.random() * 3);
+      expect(roundTripMarks(marks).length).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it("returns no record for unknown versions and unreadable strings", () => {
+    expect(decodeMarks("Z123", V, 432)).toBeNull();
+    expect(decodeMarks("a!!", V, 432)).toBeNull();
+  });
+
+  it("leaves the level codes unchanged", () => {
+    const levels = Uint8Array.from({ length: 432 }, (_, i) => (i * 7) % 6);
+    expect(Array.from(decodeLevels(encodeLevels(levels, "A"), V, 432)!)).toEqual(Array.from(levels));
+    expect(decodeLevels(DENSE_LINK, V, 432)!.filter((v) => v > 0).length).toBe(142);
   });
 });
