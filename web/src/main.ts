@@ -88,7 +88,7 @@ async function main() {
             {
               type: "Feature" as const,
               geometry: { type: "Point" as const, coordinates: [is.lon, is.lat] },
-              properties: { idx, name: is.name, shape: is.shape, level: levels[idx], mark: marks[idx] },
+              properties: { idx, name: is.name, level: levels[idx], mark: marks[idx] },
             },
           ],
     ),
@@ -137,7 +137,7 @@ async function main() {
 
     map.addSource("points", { type: "geojson", data: pointData(), promoteId: "idx" });
     addMarkImages(map);
-    const fadeWithShape = ["interpolate", ["linear"], ["zoom"], 9, 1, 11, ["case", ["get", "shape"], 0, 1]] as unknown as maplibregl.ExpressionSpecification;
+    // the marks stay on at every zoom, also on islands drawn with their shape, since a mark carries what the viewer chose
     const painted = [">", ["coalesce", ["feature-state", "level"], 0], 0] as unknown as maplibregl.ExpressionSpecification;
     map.addLayer({
       id: "points-circle",
@@ -150,11 +150,9 @@ async function main() {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["case", painted, 5, 2.5], 8, ["case", painted, 7, 4.5], 12, ["case", painted, 8, 6]],
         "circle-stroke-color": "#4d5d69",
         "circle-stroke-width": 1,
-        "circle-opacity": fadeWithShape,
-        "circle-stroke-opacity": fadeWithShape,
       },
     });
-    // △ □ ✕: icons drawn at the same sizes as the circles, in the level's colour
+    // △ □ ◇ ☆ ✕: icons drawn at the same sizes as the circles, in the level's colour
     const paintedProp = [">", ["get", "level"], 0] as unknown as maplibregl.ExpressionSpecification;
     const iconSize = (painted: number, unpainted: number) => ["case", paintedProp, painted / MARK_ICON, unpainted / MARK_ICON];
     map.addLayer({
@@ -168,7 +166,6 @@ async function main() {
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },
-      paint: { "icon-opacity": fadeWithShape },
     });
     map.addLayer({
       id: "island-labels",
